@@ -1,0 +1,78 @@
+name: Build Linux AppImage
+
+on:
+  push:
+    branches: [ main, master ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install root dependencies
+      run: npm install
+    
+    - name: Install Frontend dependencies
+      working-directory: ./Frontend
+      run: npm install
+    
+    - name: Build Frontend
+      working-directory: ./Frontend
+      run: npm run build
+    
+    - name: Install Backend dependencies
+      working-directory: ./Backend
+      run: npm install
+    
+    - name: Setup Python AI Service
+      working-directory: ./Backend/AI-Service
+      run: |
+        python -m venv venv
+        source venv/bin/activate
+        pip install --upgrade pip
+        pip install -r requirements.txt
+        python download_nltk_data.py
+        deactivate
+    
+    - name: Create icon
+      run: python create_icon.py
+    
+    - name: Build AppImage
+      run: npm run dist:linux
+    
+    - name: List dist folder
+      run: ls -la dist/
+    
+    - name: Upload AppImage
+      uses: actions/upload-artifact@v4
+      with:
+        name: NotesMaker-Linux-AppImage
+        path: dist/*.AppImage
+        if-no-files-found: error
+    
+    - name: Upload to Release (if tag)
+      if: startsWith(github.ref, 'refs/tags/v')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: dist/*.AppImage
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

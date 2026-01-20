@@ -1,6 +1,19 @@
 {
+  "name": "backend",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "Index.js",
+  "scripts": {
+    "start": "node Index.js",
+    "dev": "node --watch Index.js"
+  },
   "dependencies": {
+    "better-sqlite3": "^11.7.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
     "express": "^5.2.1",
-    "mongoose": "^9.1.2"
+    "node-fetch": "^3.3.2",
+    "sqlite3": "^5.1.7",
+    "uuid": "^11.0.3"
   }
 }

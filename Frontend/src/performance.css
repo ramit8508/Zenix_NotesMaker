@@ -1,0 +1,49 @@
+/* Performance Optimizations */
+
+/* Hardware Acceleration & GPU Optimization */
+.app,
+.sidebar,
+.editor-content,
+.notes-list,
+.ai-assistant-panel,
+.drawing-canvas {
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Optimize Content Rendering */
+.note-content-input {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeSpeed;
+  contain: layout style;
+}
+
+/* Optimize Scrolling */
+.notes-list,
+.editor-content,
+.ai-assistant-panel,
+.ai-modal-content {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Reduce Repaints */
+.note-item,
+.icon-btn,
+.tool-btn,
+.folder-item {
+  contain: layout;
+}
+
+/* Optimize Images */
+.note-content-input img {
+  will-change: transform;
+}
+
+/* Optimize Font Rendering */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
