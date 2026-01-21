@@ -27,7 +27,8 @@
       "Frontend/dist/**/*",
       "Backend/**/*",
       "!Backend/node_modules/**/*",
-      "!Backend/Db/tasks.db"
+      "!Backend/Db/tasks.db",
+      "Frontend/electron/**/*.cjs"
     ],
     "extraResources": [
       {
