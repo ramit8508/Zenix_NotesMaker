@@ -27,13 +27,15 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, 'preload.cjs')
     },
     icon: path.join(__dirname, '..', '..', 'build', 'icon.png')
   });
 
-  // Load the app
-  if (process.env.NODE_ENV === 'development') {
+  // Load the app - check if dev server is running
+  const isDev = !app.isPackaged;
+  
+  if (isDev) {
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools();
   } else {
@@ -48,10 +50,10 @@ function createWindow() {
 app.whenReady().then(() => {
   startBackend();
   
-  // Wait for backend to start
+  // Wait longer for both backend and vite dev server to start
   setTimeout(() => {
     createWindow();
-  }, 3000);
+  }, 5000);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
