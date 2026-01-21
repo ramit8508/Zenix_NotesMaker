@@ -42,16 +42,6 @@ jobs:
       working-directory: ./Backend
       run: npm install
     
-    - name: Setup Python AI Service
-      working-directory: ./Backend/AI-Service
-      run: |
-        python -m venv venv
-        . venv/bin/activate
-        pip install --upgrade pip
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-        if [ -f download_nltk_data.py ]; then python download_nltk_data.py; fi
-        deactivate
-    
     - name: Create icon
       run: python create_icon.py
     
