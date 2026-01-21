@@ -74,12 +74,18 @@ function App() {
   const [showAiModal, setShowAiModal] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiAvailable, setAiAvailable] = useState(false);
+  const [appLoading, setAppLoading] = useState(true);
 
   useEffect(() => {
     fetchNotes();
     fetchStats();
     fetchFolders();
     checkAiService();
+    
+    // App loading animation
+    const timer = setTimeout(() => {
+      setAppLoading(false);
+    }, 1500);
     
     // AUTO-SAVE: Save content before closing the app
     const handleBeforeUnload = (e) => {
@@ -99,7 +105,10 @@ function App() {
     };
     
     window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      clearTimeout(timer);
+    };
   }, []);
 
   useEffect(() => {
@@ -374,6 +383,40 @@ function App() {
     return notes.filter(note => note.folder === selectedFolder);
   };
 
+  const groupNotesByDate = (notesToGroup) => {
+    const groups = {};
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    notesToGroup.forEach(note => {
+      const noteDate = new Date(note.updated_at || note.created_at);
+      noteDate.setHours(0, 0, 0, 0);
+      
+      let groupKey;
+      if (noteDate.getTime() === today.getTime()) {
+        groupKey = 'Today';
+      } else if (noteDate.getTime() === yesterday.getTime()) {
+        groupKey = 'Yesterday';
+      } else if (noteDate > new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)) {
+        groupKey = 'This Week';
+      } else if (noteDate.getMonth() === today.getMonth() && noteDate.getFullYear() === today.getFullYear()) {
+        groupKey = 'This Month';
+      } else {
+        groupKey = noteDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      }
+      
+      if (!groups[groupKey]) {
+        groups[groupKey] = [];
+      }
+      groups[groupKey].push(note);
+    });
+    
+    return groups;
+  };
+
   const getFolderIcon = (folderName) => {
     const icons = {
       'Work': '💼',
@@ -614,8 +657,38 @@ function App() {
 
   const getPreview = (text) => {
     if (!text) return 'No additional text';
-    const plainText = text.replace(/<img[^>]*>/g, '[Image] ').replace(/<canvas[^>]*>.*?<\/canvas>/g, '[Drawing] ');
-    return plainText.substring(0, 60) + (plainText.length > 60 ? '...' : '');
+    
+    // Remove HTML tags and extract plain text
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = text;
+    let plainText = tempDiv.textContent || tempDiv.innerText || '';
+    
+    // Replace images and drawings with indicators
+    plainText = plainText.replace(/\[Image\]/g, '📷 ');
+    plainText = plainText.replace(/\[Drawing\]/g, '🎨 ');
+    
+    // Get first line or first meaningful sentence
+    const lines = plainText.split('\n').filter(line => line.trim().length > 0);
+    const firstLine = lines[0] || '';
+    
+    // Count images and drawings
+    const imageCount = (text.match(/<img/g) || []).length;
+    const drawingCount = (text.match(/<canvas/g) || []).length;
+    
+    let preview = firstLine.trim();
+    if (preview.length > 80) {
+      preview = preview.substring(0, 80) + '...';
+    }
+    
+    // Add media indicators
+    if (imageCount > 0 || drawingCount > 0) {
+      const indicators = [];
+      if (imageCount > 0) indicators.push(`📷 ${imageCount}`);
+      if (drawingCount > 0) indicators.push(`🎨 ${drawingCount}`);
+      preview = preview + ' • ' + indicators.join(' ');
+    }
+    
+    return preview || 'Empty note';
   };
 
   const handleImageUpload = (e) => {
@@ -1443,11 +1516,28 @@ function App() {
   }, [title, content, selectedNote?.id]);
 
   return (
-    <div className="app">
+    <>
+      {appLoading && (
+        <div className="app-loading-screen">
+          <img 
+            src={theme === 'dark' ? '/darkmodelogo.jpeg' : '/lightmodelogo.jpeg'} 
+            alt="Zenix Notes" 
+            className="loading-logo"
+          />
+          <h1 className="loading-title">Zenix Notes</h1>
+          <div className="loading-spinner"></div>
+        </div>
+      )}
+      <div className={`app ${appLoading ? 'hidden' : 'loaded'}`}>
       {/* Sidebar */}
       <div className="sidebar">
         <div className="sidebar-header">
-          <h1>Notes</h1>
+          <img 
+            src={theme === 'dark' ? '/darkmodelogo.jpeg' : '/lightmodelogo.jpeg'} 
+            alt="Zenix Notes Logo" 
+            className="app-logo"
+          />
+          <h1>Zenix Notes</h1>
           <p>{new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
         </div>
         
@@ -1537,17 +1627,36 @@ function App() {
         </div>
 
         <div className="notes-list">
-          {getFilteredNotes().map(note => (
-            <div 
-              key={note.id}
-              className={`note-item ${selectedNote?.id === note.id ? 'active' : ''}`}
-              onClick={() => setSelectedNote(note)}
-            >
-              <div className="note-item-title">{note.title}</div>
-              <div className="note-item-preview">{getPreview(note.content)}</div>
-              <div className="note-item-date">{formatDate(note.updated_at)}</div>
-            </div>
-          ))}
+          {(() => {
+            const filteredNotes = getFilteredNotes();
+            const groupedNotes = groupNotesByDate(filteredNotes);
+            const groupOrder = ['Today', 'Yesterday', 'This Week', 'This Month'];
+            const sortedGroups = Object.keys(groupedNotes).sort((a, b) => {
+              const aIndex = groupOrder.indexOf(a);
+              const bIndex = groupOrder.indexOf(b);
+              if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+              if (aIndex !== -1) return -1;
+              if (bIndex !== -1) return 1;
+              return b.localeCompare(a);
+            });
+            
+            return sortedGroups.map(groupName => (
+              <div key={groupName} className="notes-date-group">
+                <div className="notes-date-header">{groupName}</div>
+                {groupedNotes[groupName].map(note => (
+                  <div 
+                    key={note.id}
+                    className={`note-item ${selectedNote?.id === note.id ? 'active' : ''}`}
+                    onClick={() => setSelectedNote(note)}
+                  >
+                    <div className="note-item-title">{note.title}</div>
+                    <div className="note-item-preview">{getPreview(note.content)}</div>
+                    <div className="note-item-date">{formatDate(note.updated_at)}</div>
+                  </div>
+                ))}
+              </div>
+            ));
+          })()}
         </div>
 
         <button className="new-note-btn" onClick={handleNewNote}>
@@ -2052,46 +2161,8 @@ function App() {
           </div>
         )}
       </div>
-
-      {/* AI Assistant Panel */}
-      <div className="ai-assistant-panel">
-        <div className="ai-assistant-header">
-          <div className="ai-assistant-title">
-            <Sparkles size={24} />
-            AI Assistant
-          </div>
-          <div className="ai-assistant-status">
-            Online & Ready
-          </div>
-        </div>
-
-        <div className="ai-assistant-content">
-          <div className="ai-action-card" onClick={() => handleAiAction('summarize')}>
-            <div className="ai-action-title">
-              <FileText size={18} />
-              Summarize
-            </div>
-            <div className="ai-action-desc">Get a concise summary</div>
-          </div>
-
-          <div className="ai-action-card" onClick={() => handleAiAction('rewrite')}>
-            <div className="ai-action-title">
-              <Pen size={18} />
-              Rewrite
-            </div>
-            <div className="ai-action-desc">Improve clarity & structure</div>
-          </div>
-
-          <div className="ai-action-card" onClick={() => handleAiAction('explain')}>
-            <div className="ai-action-title">
-              <Type size={18} />
-              Explain
-            </div>
-            <div className="ai-action-desc">Explain in simple terms</div>
-          </div>
-        </div>
-      </div>
     </div>
+    </>
   );
 }
 
