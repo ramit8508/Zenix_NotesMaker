@@ -46,10 +46,10 @@ jobs:
       working-directory: ./Backend/AI-Service
       run: |
         python -m venv venv
-        source venv/bin/activate
+        . venv/bin/activate
         pip install --upgrade pip
-        pip install -r requirements.txt
-        python download_nltk_data.py
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        if [ -f download_nltk_data.py ]; then python download_nltk_data.py; fi
         deactivate
     
     - name: Create icon
