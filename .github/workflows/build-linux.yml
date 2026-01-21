@@ -42,9 +42,6 @@ jobs:
       working-directory: ./Backend
       run: npm install
     
-    - name: Create icon
-      run: python create_icon.py
-    
     - name: Build AppImage
       run: npm run dist:linux
     
