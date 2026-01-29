@@ -29,6 +29,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import './App.css';
+import { getApiUrl } from './config';
 
 function App() {
   const [notes, setNotes] = useState([]);
@@ -172,7 +173,7 @@ function App() {
 
   const checkAiService = async () => {
     try {
-      const response = await fetch('/api/ai/health', {
+      const response = await fetch(getApiUrl('ai/health'), {
         credentials: 'include'
       });
       const data = await response.json();
@@ -190,7 +191,7 @@ function App() {
     setAiSummary(null);
     
     try {
-      const response = await fetch('/api/ai/analyze-note', {
+      const response = await fetch(getApiUrl('ai/analyze-note'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -267,7 +268,7 @@ function App() {
 
   const fetchNotes = async () => {
     try {
-      const response = await fetch('/api/notes', {
+      const response = await fetch(getApiUrl('notes'), {
         credentials: 'include'
       });
       const data = await response.json();
@@ -281,7 +282,7 @@ function App() {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch('/api/notes/stats', {
+      const response = await fetch(getApiUrl('notes/stats'), {
         credentials: 'include'
       });
       const data = await response.json();
@@ -295,7 +296,7 @@ function App() {
 
   const fetchFolders = async () => {
     try {
-      const response = await fetch('/api/folders', {
+      const response = await fetch(getApiUrl('folders'), {
         credentials: 'include'
       });
       const data = await response.json();
@@ -333,7 +334,7 @@ function App() {
 
   const handleNewNote = async () => {
     try {
-      const response = await fetch('/api/notes', {
+      const response = await fetch(getApiUrl('notes'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -470,7 +471,7 @@ function App() {
     // Update notes in that folder
     const folderNotes = notes.filter(note => note.folder === oldName);
     for (const note of folderNotes) {
-      await fetch(`/api/notes/${note.id}`, {
+      await fetch(getApiUrl(`notes/${note.id}`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -502,7 +503,7 @@ function App() {
       
       // Move notes to "Notes" folder
       for (const note of folderNotes) {
-        await fetch(`/api/notes/${note.id}`, {
+        await fetch(getApiUrl(`notes/${note.id}`), {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
@@ -529,7 +530,7 @@ function App() {
     setFolderContextMenu(null);
     
     try {
-      const response = await fetch('/api/notes', {
+      const response = await fetch(getApiUrl('notes'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -589,7 +590,7 @@ function App() {
     if (!selectedNote) return;
 
     try {
-      const response = await fetch(`/api/notes/${selectedNote.id}`, {
+      const response = await fetch(getApiUrl(`notes/${selectedNote.id}`), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -616,7 +617,7 @@ function App() {
     if (!confirm('Delete this note?')) return;
 
     try {
-      const response = await fetch(`/api/notes/${selectedNote.id}`, {
+      const response = await fetch(getApiUrl(`notes/${selectedNote.id}`), {
         method: 'DELETE',
         credentials: 'include',
       });

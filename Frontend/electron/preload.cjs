@@ -4,5 +4,6 @@ const { contextBridge } = require('electron');
 // the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('electron', {
   platform: process.platform,
-  versions: process.versions
+  versions: process.versions,
+  isPackaged: process.env.IS_PACKAGED === 'true'
 });

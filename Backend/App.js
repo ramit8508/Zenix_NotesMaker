@@ -9,7 +9,7 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: 'http://localhost:5173', // Vite dev server
+  origin: ['http://localhost:5173', 'http://localhost:5000', 'file://'], // Vite dev server, API calls from Electron, and file protocol
   credentials: true
 }));
 app.use(express.json({ limit: '50mb' }));

@@ -29,7 +29,11 @@ function startBackend() {
   backendProcess = spawn(nodePath, ['Index.js'], {
     cwd: backendPath,
     stdio: 'inherit',
-    env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }
+    env: { 
+      ...process.env, 
+      ELECTRON_RUN_AS_NODE: '1',
+      IS_PACKAGED: (!isDev).toString()
+    }
   });
 
   backendProcess.on('error', (err) => {
@@ -51,7 +55,11 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload.cjs')
+      preload: path.join(__dirname, 'preload.cjs'),
+      webSecurity: true,
+      allowRunningInsecureContent: false,
+      enableRemoteModule: false,
+      sandbox: false // Allow file access for images
     },
     icon: isDev 
       ? path.join(__dirname, '..', '..', 'build', 'icon.png')
