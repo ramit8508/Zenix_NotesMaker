@@ -7,12 +7,26 @@ let backendProcess;
 
 // Start Backend Server
 function startBackend() {
-  const backendPath = path.join(__dirname, '..', '..', 'Backend');
-  const nodePath = process.platform === 'win32' ? 'node.exe' : 'node';
+  const isDev = !app.isPackaged;
+  
+  let backendPath;
+  let nodePath;
+  
+  if (isDev) {
+    // Development: Backend is in project root
+    backendPath = path.join(__dirname, '..', '..', 'Backend');
+    nodePath = process.platform === 'win32' ? 'node.exe' : 'node';
+  } else {
+    // Production: Backend is in resources/Backend
+    backendPath = path.join(process.resourcesPath, 'Backend');
+    // Use the Node.js binary bundled with Electron
+    nodePath = process.execPath;
+  }
   
   backendProcess = spawn(nodePath, ['Index.js'], {
     cwd: backendPath,
-    stdio: 'inherit'
+    stdio: 'inherit',
+    env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }
   });
 
   backendProcess.on('error', (err) => {
