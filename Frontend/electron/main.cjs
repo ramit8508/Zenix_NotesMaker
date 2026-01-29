@@ -23,6 +23,9 @@ function startBackend() {
     nodePath = process.execPath;
   }
   
+  console.log('Starting backend from:', backendPath);
+  console.log('Using node:', nodePath);
+  
   backendProcess = spawn(nodePath, ['Index.js'], {
     cwd: backendPath,
     stdio: 'inherit',
@@ -32,29 +35,49 @@ function startBackend() {
   backendProcess.on('error', (err) => {
     console.error('Failed to start backend:', err);
   });
+  
+  backendProcess.on('exit', (code, signal) => {
+    console.log('Backend process exited with code:', code, 'signal:', signal);
+  });
 }
 
 function createWindow() {
+  const isDev = !app.isPackaged;
+  
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
+    show: false, // Don't show until ready
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.cjs')
     },
-    icon: path.join(__dirname, '..', '..', 'build', 'icon.png')
+    icon: isDev 
+      ? path.join(__dirname, '..', '..', 'build', 'icon.png')
+      : path.join(process.resourcesPath, '..', 'build', 'icon.png')
   });
 
-  // Load the app - check if dev server is running
-  const isDev = !app.isPackaged;
+  // Show window when ready to avoid white screen
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show();
+  });
   
   if (isDev) {
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
+    // In packaged app, load from app.asar
+    const indexPath = path.join(__dirname, '..', 'dist', 'index.html');
+    console.log('Loading index from:', indexPath);
+    mainWindow.loadFile(indexPath).catch(err => {
+      console.error('Failed to load index.html:', err);
+    });
   }
+
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+    console.error('Failed to load:', errorCode, errorDescription);
+  });
 
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -64,10 +87,10 @@ function createWindow() {
 app.whenReady().then(() => {
   startBackend();
   
-  // Wait longer for both backend and vite dev server to start
+  // Wait for backend to start (reduce delay for better UX)
   setTimeout(() => {
     createWindow();
-  }, 5000);
+  }, 3000);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
