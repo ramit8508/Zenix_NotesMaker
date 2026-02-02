@@ -1521,7 +1521,7 @@ function App() {
       {appLoading && (
         <div className="app-loading-screen">
           <img 
-            src={theme === 'dark' ? '/darkmodelogo.jpeg' : '/lightmodelogo.jpeg'} 
+            src={theme === 'dark' ? 'darkmodelogo.jpeg' : 'lightmodelogo.jpeg'} 
             alt="Zenix Notes" 
             className="loading-logo"
           />
@@ -1534,7 +1534,7 @@ function App() {
       <div className="sidebar">
         <div className="sidebar-header">
           <img 
-            src={theme === 'dark' ? '/darkmodelogo.jpeg' : '/lightmodelogo.jpeg'} 
+            src={theme === 'dark' ? 'darkmodelogo.jpeg' : 'lightmodelogo.jpeg'} 
             alt="Zenix Notes Logo" 
             className="app-logo"
           />

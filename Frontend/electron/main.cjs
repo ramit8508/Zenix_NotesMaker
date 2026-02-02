@@ -1,9 +1,42 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
+const http = require('http');
 
 let mainWindow;
 let backendProcess;
+let backendReady = false;
+
+// Check if backend is ready
+function checkBackendHealth() {
+  return new Promise((resolve) => {
+    const req = http.get('http://localhost:5000/health', (res) => {
+      resolve(res.statusCode === 200);
+    });
+    req.on('error', () => resolve(false));
+    req.setTimeout(1000, () => {
+      req.destroy();
+      resolve(false);
+    });
+  });
+}
+
+// Wait for backend to be ready
+async function waitForBackend(maxAttempts = 15) {
+  console.log('Waiting for backend to start...');
+  for (let i = 0; i < maxAttempts; i++) {
+    const isReady = await checkBackendHealth();
+    if (isReady) {
+      console.log('✅ Backend is ready!');
+      backendReady = true;
+      return true;
+    }
+    console.log(`Attempt ${i + 1}/${maxAttempts}...`);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+  console.error('❌ Backend failed to start in time');
+  return false;
+}
 
 // Start Backend Server
 function startBackend() {
@@ -117,13 +150,17 @@ function createWindow() {
   });
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   startBackend();
   
-  // Wait for backend to start
-  setTimeout(() => {
+  // Wait for backend to be ready
+  const ready = await waitForBackend();
+  if (ready) {
     createWindow();
-  }, 5000);
+  } else {
+    console.error('Cannot start app: Backend failed to initialize');
+    app.quit();
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
