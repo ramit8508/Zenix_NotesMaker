@@ -1,11 +1,28 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
+import os from 'os';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const db = new Database(path.join(__dirname, 'tasks.db'));
+// Determine database path based on environment
+let dbPath;
+if (process.env.IS_PACKAGED === 'true') {
+  // In packaged app, use user data directory (writable location)
+  const userDataDir = path.join(os.homedir(), '.notesmaker');
+  if (!fs.existsSync(userDataDir)) {
+    fs.mkdirSync(userDataDir, { recursive: true });
+  }
+  dbPath = path.join(userDataDir, 'tasks.db');
+  console.log('📁 Using user data directory for database:', dbPath);
+} else {
+  // In development, use local directory
+  dbPath = path.join(__dirname, 'tasks.db');
+}
+
+const db = new Database(dbPath);
 
 // Enable foreign keys
 db.pragma('foreign_keys = ON');

@@ -19,22 +19,35 @@ function startBackend() {
   } else {
     // Production: Backend is in resources/Backend
     backendPath = path.join(process.resourcesPath, 'Backend');
-    // Use the Node.js binary bundled with Electron
-    nodePath = process.execPath;
+    // For AppImage, use node from PATH instead of electron binary
+    if (process.platform === 'linux' && process.env.APPIMAGE) {
+      nodePath = 'node';
+    } else {
+      // Use the Node.js binary bundled with Electron
+      nodePath = process.execPath;
+    }
   }
   
   console.log('Starting backend from:', backendPath);
   console.log('Using node:', nodePath);
+  console.log('Is AppImage:', !!process.env.APPIMAGE);
+  console.log('Platform:', process.platform);
   
-  backendProcess = spawn(nodePath, ['Index.js'], {
+  const spawnOptions = {
     cwd: backendPath,
     stdio: 'inherit',
     env: { 
       ...process.env, 
-      ELECTRON_RUN_AS_NODE: '1',
       IS_PACKAGED: (!isDev).toString()
     }
-  });
+  };
+  
+  // Only set ELECTRON_RUN_AS_NODE if using electron binary as node
+  if (nodePath === process.execPath && process.platform !== 'linux') {
+    spawnOptions.env.ELECTRON_RUN_AS_NODE = '1';
+  }
+  
+  backendProcess = spawn(nodePath, ['Index.js'], spawnOptions);
 
   backendProcess.on('error', (err) => {
     console.error('Failed to start backend:', err);
@@ -63,7 +76,7 @@ function createWindow() {
     },
     icon: isDev 
       ? path.join(__dirname, '..', '..', 'build', 'icon.png')
-      : path.join(process.resourcesPath, '..', 'build', 'icon.png')
+      : path.join(__dirname, '..', '..', 'build', 'icon.png')
   });
 
   // Show window when ready to avoid white screen

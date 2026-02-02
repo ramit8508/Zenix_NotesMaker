@@ -25,18 +25,20 @@
     "files": [
       "Frontend/electron/**/*",
       "Frontend/dist/**/*",
-      "Backend/**/*",
-      "!Backend/node_modules/**/*",
-      "!Backend/Db/tasks.db",
+      "build/icon.png",
       "Frontend/electron/**/*.cjs"
+    ],
+    "asarUnpack": [
+      "Backend/**/*"
     ],
     "extraResources": [
       {
         "from": "Backend",
         "to": "Backend",
-        "filter": ["**/*"]
+        "filter": ["**/*", "!node_modules/**/*"]
       }
     ],
+    "afterPack": "./afterPack.js",
     "linux": {
       "target": [
         {
@@ -45,7 +47,8 @@
         }
       ],
       "category": "Office",
-      "icon": "build/icon.png"
+      "icon": "build/icon.png",
+      "executableName": "notesmaker"
     },
     "win": {
       "target": ["nsis"],
