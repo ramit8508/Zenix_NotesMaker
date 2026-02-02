@@ -35,10 +35,11 @@ function startBackend() {
   
   const spawnOptions = {
     cwd: backendPath,
-    stdio: 'inherit',
+    stdio: ['ignore', 'pipe', 'pipe'],
     env: { 
       ...process.env, 
-      IS_PACKAGED: (!isDev).toString()
+      IS_PACKAGED: (!isDev).toString(),
+      PORT: '5000'
     }
   };
   
@@ -47,7 +48,20 @@ function startBackend() {
     spawnOptions.env.ELECTRON_RUN_AS_NODE = '1';
   }
   
-  backendProcess = spawn(nodePath, ['Index.js'], spawnOptions);
+  backendProcess = spawn(nodePath, ['start.mjs'], spawnOptions);
+  
+  // Capture backend output
+  if (backendProcess.stdout) {
+    backendProcess.stdout.on('data', (data) => {
+      console.log('[Backend]:', data.toString());
+    });
+  }
+  
+  if (backendProcess.stderr) {
+    backendProcess.stderr.on('data', (data) => {
+      console.error('[Backend Error]:', data.toString());
+    });
+  }
 
   backendProcess.on('error', (err) => {
     console.error('Failed to start backend:', err);
@@ -74,9 +88,7 @@ function createWindow() {
       enableRemoteModule: false,
       sandbox: false // Allow file access for images
     },
-    icon: isDev 
-      ? path.join(__dirname, '..', '..', 'build', 'icon.png')
-      : path.join(__dirname, '..', '..', 'build', 'icon.png')
+    icon: path.join(__dirname, '..', '..', 'build', 'icon.png')
   });
 
   // Show window when ready to avoid white screen
@@ -108,10 +120,10 @@ function createWindow() {
 app.whenReady().then(() => {
   startBackend();
   
-  // Wait for backend to start (reduce delay for better UX)
+  // Wait for backend to start
   setTimeout(() => {
     createWindow();
-  }, 3000);
+  }, 5000);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
