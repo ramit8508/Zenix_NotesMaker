@@ -274,8 +274,9 @@ function App() {
       const data = await response.json();
       if (data.success) {
         console.log('Fetched notes:', data.data);
-        setNotes(data.data);
-        return data.data;
+        // Force a new array reference to trigger re-render
+        setNotes([...data.data]);
+        return [...data.data];
       }
     } catch (error) {
       console.error('Error fetching notes:', error);
@@ -1701,7 +1702,7 @@ function App() {
           )}
         </div>
 
-        <div className="notes-list">
+        <div className="notes-list" key={`notes-${notes.length}-${selectedFolder}`}>
           {(() => {
             const filteredNotes = getFilteredNotes();
             
