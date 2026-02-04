@@ -337,6 +337,8 @@ function App() {
 
   const handleNewNote = async () => {
     try {
+      const targetFolder = selectedFolder || 'Personal';
+      
       const response = await fetch(getApiUrl('notes'), {
         method: 'POST',
         headers: {
@@ -346,20 +348,28 @@ function App() {
         body: JSON.stringify({
           title: 'Untitled Note',
           content: '',
-          folder: selectedFolder || 'Personal'
+          folder: targetFolder
         }),
       });
 
       const data = await response.json();
       if (data.success) {
-        await fetchNotes();
+        console.log('New note created:', data.data);
+        
+        // Refresh all data
+        const updatedNotes = await fetchNotes();
         await fetchStats();
         await fetchFolders();
-        setSelectedNote(data.data);
-        setTitle(data.data.title);
-        setContent(data.data.content || '');
+        
+        // Find the note in updated list
+        const createdNote = updatedNotes.find(n => n.id === data.data.id) || data.data;
+        
+        // Select the new note
+        setSelectedNote(createdNote);
+        setTitle(createdNote.title);
+        setContent(createdNote.content || '');
         if (contentEditableRef.current) {
-          contentEditableRef.current.innerHTML = data.data.content || '';
+          contentEditableRef.current.innerHTML = createdNote.content || '';
         }
       }
     } catch (error) {
@@ -370,8 +380,10 @@ function App() {
   const handleCreateFolder = async () => {
     if (!newFolderName.trim()) return;
     
+    const folderName = newFolderName.trim();
+    
     // Check for duplicates
-    const folderExists = folders.some(f => f.folder.toLowerCase() === newFolderName.trim().toLowerCase());
+    const folderExists = folders.some(f => f.folder.toLowerCase() === folderName.toLowerCase());
     if (folderExists) {
       alert('A folder with this name already exists!');
       return;
@@ -384,15 +396,19 @@ function App() {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({ name: newFolderName.trim() }),
+        body: JSON.stringify({ name: folderName }),
       });
 
       const data = await response.json();
       if (data.success) {
+        console.log('Folder created:', folderName);
         await fetchFolders();
         setNewFolderName('');
         setShowNewFolderInput(false);
+        // Select the new folder
+        setSelectedFolder(folderName);
       } else {
+        console.error('Failed to create folder:', data.error);
         alert(data.error || 'Failed to create folder');
       }
     } catch (error) {
