@@ -282,7 +282,6 @@ function App() {
     }
     return [];
   };
-  };
 
   const fetchStats = async () => {
     try {
