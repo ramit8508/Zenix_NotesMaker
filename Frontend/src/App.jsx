@@ -579,19 +579,23 @@ function App() {
 
       const data = await response.json();
       if (data.success) {
-        // First update folder selection
-        setSelectedFolder(folderName);
-        // Then fetch notes and folders
+        console.log('Created note:', data.data);
+        
+        // Fetch updated data
         await fetchNotes();
         await fetchStats();
         await fetchFolders();
-        // Finally select the new note
-        setSelectedNote(data.data);
-        setTitle(data.data.title);
-        setContent(data.data.content || '');
-        if (contentEditableRef.current) {
-          contentEditableRef.current.innerHTML = data.data.content || '';
-        }
+        
+        // Use setTimeout to ensure state updates after fetching
+        setTimeout(() => {
+          setSelectedFolder(folderName);
+          setSelectedNote(data.data);
+          setTitle(data.data.title);
+          setContent(data.data.content || '');
+          if (contentEditableRef.current) {
+            contentEditableRef.current.innerHTML = data.data.content || '';
+          }
+        }, 100);
       }
     } catch (error) {
       console.error('Error creating note:', error);
