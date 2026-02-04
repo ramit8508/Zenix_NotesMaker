@@ -402,8 +402,10 @@ function App() {
   };
 
   const getFilteredNotes = () => {
-    if (!selectedFolder) return notes;
-    return notes.filter(note => note.folder === selectedFolder);
+    const filtered = !selectedFolder ? notes : notes.filter(note => note.folder === selectedFolder);
+    console.log('getFilteredNotes - selectedFolder:', selectedFolder, 'total notes:', notes.length, 'filtered:', filtered.length);
+    console.log('Filtered notes:', filtered);
+    return filtered;
   };
 
   const groupNotesByDate = (notesToGroup) => {
@@ -1686,6 +1688,17 @@ function App() {
         <div className="notes-list">
           {(() => {
             const filteredNotes = getFilteredNotes();
+            
+            if (filteredNotes.length === 0) {
+              return (
+                <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                  {selectedFolder 
+                    ? `No notes in ${selectedFolder}` 
+                    : 'No notes yet. Click + New Note to create one.'}
+                </div>
+              );
+            }
+            
             const groupedNotes = groupNotesByDate(filteredNotes);
             const groupOrder = ['Today', 'Yesterday', 'This Week', 'This Month'];
             const sortedGroups = Object.keys(groupedNotes).sort((a, b) => {
