@@ -623,6 +623,9 @@ function App() {
   const handleUpdateNote = async () => {
     if (!selectedNote) return;
 
+    // Get the actual content from contentEditable div
+    const actualContent = contentEditableRef.current ? contentEditableRef.current.innerHTML : content;
+
     try {
       const response = await fetch(getApiUrl(`notes/${selectedNote.id}`), {
         method: 'PUT',
@@ -632,13 +635,17 @@ function App() {
         credentials: 'include',
         body: JSON.stringify({
           title: title || 'Untitled Note',
-          content: content
+          content: actualContent
         }),
       });
 
       const data = await response.json();
       if (data.success) {
+        // Update the content state to match what was saved
+        setContent(actualContent);
+        // Refresh notes list to show updated note
         await fetchNotes();
+        await fetchFolders();
       }
     } catch (error) {
       console.error('Error updating note:', error);
@@ -2009,15 +2016,7 @@ function App() {
             
             {/* Image Manipulation Menu */}
             {showImageMenu && selectedImage && !cropMode && (
-              <div 
-                className="image-menu"
-                style={{
-                  position: 'fixed',
-                  left: `${imageMenuPosition.x}px`,
-                  top: `${imageMenuPosition.y}px`,
-                  zIndex: 1000
-                }}
-              >
+              <div className="image-menu">
                 <div className="image-menu-header">Image Options</div>
                 <button className="image-menu-item" onClick={startMoveImage}>
                   <Move size={16} />
