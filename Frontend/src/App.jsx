@@ -374,9 +374,28 @@ function App() {
       return;
     }
     
-    setFolders(prev => [...prev, { folder: newFolderName.trim(), count: 0 }]);
-    setNewFolderName('');
-    setShowNewFolderInput(false);
+    try {
+      const response = await fetch(getApiUrl('folders'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ name: newFolderName.trim() }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        await fetchFolders();
+        setNewFolderName('');
+        setShowNewFolderInput(false);
+      } else {
+        alert(data.error || 'Failed to create folder');
+      }
+    } catch (error) {
+      console.error('Error creating folder:', error);
+      alert('Failed to create folder');
+    }
   };
 
   const getFilteredNotes = () => {
@@ -453,7 +472,10 @@ function App() {
   };
 
   const confirmRenameFolder = async () => {
-    if (!renamingFolder || !newFolderRename.trim()) return;
+    if (!renamingFolder || !newFolderRename.trim()) {
+      setRenamingFolder(null);
+      return;
+    }
     
     const oldName = renamingFolder.folder;
     const newName = newFolderRename.trim();
@@ -463,29 +485,34 @@ function App() {
       return;
     }
     
-    // Update folder name in list
-    setFolders(prev => prev.map(f => 
-      f.folder === oldName ? { ...f, folder: newName } : f
-    ));
-    
-    // Update notes in that folder
-    const folderNotes = notes.filter(note => note.folder === oldName);
-    for (const note of folderNotes) {
-      await fetch(getApiUrl(`notes/${note.id}`), {
+    try {
+      const response = await fetch(getApiUrl(`folders/${encodeURIComponent(oldName)}`), {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         credentials: 'include',
-        body: JSON.stringify({ ...note, folder: newName })
+        body: JSON.stringify({ newName }),
       });
-    }
-    
-    await fetchNotes();
-    await fetchFolders();
-    setRenamingFolder(null);
-    setNewFolderRename('');
-    
-    if (selectedFolder === oldName) {
-      setSelectedFolder(newName);
+
+      const data = await response.json();
+      if (data.success) {
+        // If this folder was selected, update selection
+        if (selectedFolder === oldName) {
+          setSelectedFolder(newName);
+        }
+        
+        // Reset renaming state
+        setRenamingFolder(null);
+        setNewFolderRename('');
+        await fetchNotes();
+        await fetchFolders();
+      } else {
+        alert(data.error || 'Failed to rename folder');
+      }
+    } catch (error) {
+      console.error('Error renaming folder:', error);
+      alert('Failed to rename folder');
     }
   };
 
@@ -493,34 +520,41 @@ function App() {
     if (!folderContextMenu) return;
     
     const folderName = folderContextMenu.folder.folder;
-    const folderNotes = notes.filter(note => note.folder === folderName);
-    
-    if (folderNotes.length > 0) {
-      if (!confirm(`Delete folder "${folderName}" and move ${folderNotes.length} note(s) to "Notes"?`)) {
-        setFolderContextMenu(null);
-        return;
-      }
-      
-      // Move notes to "Notes" folder
-      for (const note of folderNotes) {
-        await fetch(getApiUrl(`notes/${note.id}`), {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ ...note, folder: 'Notes' })
-        });
-      }
-    }
-    
-    setFolders(prev => prev.filter(f => f.folder !== folderName));
     setFolderContextMenu(null);
     
-    if (selectedFolder === folderName) {
-      setSelectedFolder(null);
+    // Don't allow deletion of default folders
+    const defaultFolders = ['Work', 'Personal', 'Ideas', 'Projects'];
+    if (defaultFolders.includes(folderName)) {
+      alert('Cannot delete default folders!');
+      return;
     }
     
-    await fetchNotes();
-    await fetchFolders();
+    if (!confirm(`Delete "${folderName}" folder? All notes will be moved to Personal.`)) {
+      return;
+    }
+    
+    try {
+      const response = await fetch(getApiUrl(`folders/${encodeURIComponent(folderName)}`), {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        // Reset selection if this folder was selected
+        if (selectedFolder === folderName) {
+          setSelectedFolder(null);
+        }
+        
+        await fetchNotes();
+        await fetchFolders();
+      } else {
+        alert(data.error || 'Failed to delete folder');
+      }
+    } catch (error) {
+      console.error('Error deleting folder:', error);
+      alert('Failed to delete folder');
+    }
   };
 
   const handleCreateNoteInFolder = async () => {

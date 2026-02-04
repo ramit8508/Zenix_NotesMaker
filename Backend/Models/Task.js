@@ -65,6 +65,69 @@ class Note {
     `);
     return stmt.all(deviceId);
   }
+
+  static getCustomFolders(deviceId) {
+    const stmt = db.prepare(`
+      SELECT name as folder, 0 as count
+      FROM folders 
+      WHERE device_id = ?
+      ORDER BY name
+    `);
+    return stmt.all(deviceId);
+  }
+
+  static createFolder(deviceId, folderName) {
+    try {
+      const stmt = db.prepare(`
+        INSERT INTO folders (device_id, name)
+        VALUES (?, ?)
+      `);
+      stmt.run(deviceId, folderName);
+      return { folder: folderName, count: 0 };
+    } catch (error) {
+      if (error.message.includes('UNIQUE constraint')) {
+        throw new Error('Folder already exists');
+      }
+      throw error;
+    }
+  }
+
+  static renameFolder(deviceId, oldName, newName) {
+    // Update folder name in custom folders table
+    const stmt1 = db.prepare(`
+      UPDATE folders 
+      SET name = ?
+      WHERE device_id = ? AND name = ?
+    `);
+    stmt1.run(newName, deviceId, oldName);
+
+    // Update all notes with this folder
+    const stmt2 = db.prepare(`
+      UPDATE notes 
+      SET folder = ?
+      WHERE device_id = ? AND folder = ?
+    `);
+    stmt2.run(newName, deviceId, oldName);
+    return true;
+  }
+
+  static deleteFolder(deviceId, folderName) {
+    // Delete from custom folders table
+    const stmt1 = db.prepare(`
+      DELETE FROM folders 
+      WHERE device_id = ? AND name = ?
+    `);
+    stmt1.run(deviceId, folderName);
+
+    // Move notes to 'Personal' folder
+    const stmt2 = db.prepare(`
+      UPDATE notes 
+      SET folder = 'Personal'
+      WHERE device_id = ? AND folder = ?
+    `);
+    stmt2.run(deviceId, folderName);
+    return true;
+  }
 }
 
 export default Note;

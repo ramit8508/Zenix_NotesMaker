@@ -30,8 +30,59 @@ export const getNoteStats = (req, res) => {
 
 export const getFolders = (req, res) => {
   try {
-    const folders = Note.getFolders(req.deviceId);
+    // Get folders from notes (with counts)
+    const noteFolders = Note.getFolders(req.deviceId);
+    // Get custom folders (empty folders)
+    const customFolders = Note.getCustomFolders(req.deviceId);
+    
+    // Merge and deduplicate
+    const folderMap = new Map();
+    noteFolders.forEach(f => folderMap.set(f.folder, f.count));
+    customFolders.forEach(f => {
+      if (!folderMap.has(f.folder)) {
+        folderMap.set(f.folder, 0);
+      }
+    });
+    
+    const folders = Array.from(folderMap, ([folder, count]) => ({ folder, count }));
     res.json({ success: true, data: folders });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+export const createFolder = (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ success: false, error: 'Folder name is required' });
+    }
+    const folder = Note.createFolder(req.deviceId, name.trim());
+    res.status(201).json({ success: true, data: folder });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+export const renameFolder = (req, res) => {
+  try {
+    const { oldName } = req.params;
+    const { newName } = req.body;
+    if (!newName || !newName.trim()) {
+      return res.status(400).json({ success: false, error: 'New folder name is required' });
+    }
+    Note.renameFolder(req.deviceId, oldName, newName.trim());
+    res.json({ success: true, message: 'Folder renamed successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+export const deleteFolder = (req, res) => {
+  try {
+    const { name } = req.params;
+    Note.deleteFolder(req.deviceId, name);
+    res.json({ success: true, message: 'Folder deleted successfully' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

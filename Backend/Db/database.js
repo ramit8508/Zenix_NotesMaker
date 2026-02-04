@@ -53,6 +53,18 @@ const createTables = () => {
     )
   `);
 
+  // Folders table for custom folders
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS folders (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      device_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(device_id, name),
+      FOREIGN KEY (device_id) REFERENCES devices(device_id) ON DELETE CASCADE
+    )
+  `);
+
   console.log('✅ Database tables created successfully');
 };
 
