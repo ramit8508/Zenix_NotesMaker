@@ -35,7 +35,10 @@
       {
         "from": "Backend",
         "to": "Backend",
-        "filter": ["**/*", "!node_modules/**/*"]
+        "filter": [
+          "**/*",
+          "!node_modules/**/*"
+        ]
       }
     ],
     "afterPack": "./afterPack.js",
@@ -43,7 +46,9 @@
       "target": [
         {
           "target": "AppImage",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "category": "Office",
@@ -51,7 +56,9 @@
       "executableName": "notesmaker"
     },
     "win": {
-      "target": ["nsis"],
+      "target": [
+        "nsis"
+      ],
       "icon": "build/icon.ico"
     }
   },

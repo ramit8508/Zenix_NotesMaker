@@ -52,13 +52,8 @@ function startBackend() {
   } else {
     // Production: Backend is in resources/Backend
     backendPath = path.join(process.resourcesPath, 'Backend');
-    // For AppImage, use node from PATH instead of electron binary
-    if (process.platform === 'linux' && process.env.APPIMAGE) {
-      nodePath = 'node';
-    } else {
-      // Use the Node.js binary bundled with Electron
-      nodePath = process.execPath;
-    }
+    // Always use Electron's Node.js to match native module versions
+    nodePath = process.execPath;
   }
   
   console.log('Starting backend from:', backendPath);
@@ -72,14 +67,10 @@ function startBackend() {
     env: { 
       ...process.env, 
       IS_PACKAGED: (!isDev).toString(),
-      PORT: '5000'
+      PORT: '5000',
+      ELECTRON_RUN_AS_NODE: '1'
     }
   };
-  
-  // Only set ELECTRON_RUN_AS_NODE if using electron binary as node
-  if (nodePath === process.execPath && process.platform !== 'linux') {
-    spawnOptions.env.ELECTRON_RUN_AS_NODE = '1';
-  }
   
   backendProcess = spawn(nodePath, ['start.mjs'], spawnOptions);
   
