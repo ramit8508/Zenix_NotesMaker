@@ -273,11 +273,15 @@ function App() {
       });
       const data = await response.json();
       if (data.success) {
+        console.log('Fetched notes:', data.data);
         setNotes(data.data);
+        return data.data;
       }
     } catch (error) {
       console.error('Error fetching notes:', error);
     }
+    return [];
+  };
   };
 
   const fetchStats = async () => {
@@ -579,23 +583,31 @@ function App() {
 
       const data = await response.json();
       if (data.success) {
-        console.log('Created note:', data.data);
+        console.log('Created note in folder:', folderName, data.data);
         
-        // Fetch updated data
-        await fetchNotes();
+        // Force refresh everything and wait for completion
+        const updatedNotes = await fetchNotes();
         await fetchStats();
         await fetchFolders();
         
-        // Use setTimeout to ensure state updates after fetching
-        setTimeout(() => {
-          setSelectedFolder(folderName);
-          setSelectedNote(data.data);
-          setTitle(data.data.title);
-          setContent(data.data.content || '');
+        console.log('Updated notes:', updatedNotes);
+        console.log('Setting folder to:', folderName);
+        
+        // Set folder and note selection immediately
+        setSelectedFolder(folderName);
+        
+        // Find the created note in the updated notes list
+        const createdNote = updatedNotes.find(n => n.id === data.data.id);
+        if (createdNote) {
+          setSelectedNote(createdNote);
+          setTitle(createdNote.title);
+          setContent(createdNote.content || '');
           if (contentEditableRef.current) {
-            contentEditableRef.current.innerHTML = data.data.content || '';
+            contentEditableRef.current.innerHTML = createdNote.content || '';
           }
-        }, 100);
+        } else {
+          console.error('Created note not found in updated notes list');
+        }
       }
     } catch (error) {
       console.error('Error creating note:', error);
