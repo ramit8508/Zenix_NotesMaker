@@ -329,7 +329,8 @@ function App() {
           return a.folder.localeCompare(b.folder);
         });
         
-        setFolders(folderList);
+        console.log('Setting folders:', folderList);
+        setFolders([...folderList]);
       }
     } catch (error) {
       console.error('Error fetching folders:', error);
@@ -357,20 +358,24 @@ function App() {
       if (data.success) {
         console.log('New note created:', data.data);
         
+        // Immediately add to notes array for instant UI update
+        const newNote = data.data;
+        setNotes(prevNotes => {
+          console.log('Adding new note to array, prev length:', prevNotes.length);
+          return [...prevNotes, newNote];
+        });
+        
         // Refresh all data
-        const updatedNotes = await fetchNotes();
         await fetchStats();
         await fetchFolders();
-        
-        // Find the note in updated list
-        const createdNote = updatedNotes.find(n => n.id === data.data.id) || data.data;
+        setTimeout(() => fetchNotes(), 100); // Re-fetch to ensure consistency
         
         // Select the new note
-        setSelectedNote(createdNote);
-        setTitle(createdNote.title);
-        setContent(createdNote.content || '');
+        setSelectedNote(newNote);
+        setTitle(newNote.title);
+        setContent(newNote.content || '');
         if (contentEditableRef.current) {
-          contentEditableRef.current.innerHTML = createdNote.content || '';
+          contentEditableRef.current.innerHTML = newNote.content || '';
         }
       }
     } catch (error) {
@@ -382,6 +387,7 @@ function App() {
     if (!newFolderName.trim()) return;
     
     const folderName = newFolderName.trim();
+    console.log('Creating folder:', folderName);
     
     // Check for duplicates
     const folderExists = folders.some(f => f.folder.toLowerCase() === folderName.toLowerCase());
@@ -391,6 +397,7 @@ function App() {
     }
     
     try {
+      console.log('Sending POST request to:', getApiUrl('folders'));
       const response = await fetch(getApiUrl('folders'), {
         method: 'POST',
         headers: {
@@ -400,9 +407,12 @@ function App() {
         body: JSON.stringify({ name: folderName }),
       });
 
+      console.log('Response status:', response.status);
       const data = await response.json();
+      console.log('Response data:', data);
+      
       if (data.success) {
-        console.log('Folder created:', folderName);
+        console.log('Folder created successfully:', folderName);
         await fetchFolders();
         setNewFolderName('');
         setShowNewFolderInput(false);
@@ -414,7 +424,7 @@ function App() {
       }
     } catch (error) {
       console.error('Error creating folder:', error);
-      alert('Failed to create folder');
+      alert('Failed to create folder: ' + error.message);
     }
   };
 

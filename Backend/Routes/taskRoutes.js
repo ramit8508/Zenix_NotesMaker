@@ -23,6 +23,9 @@ router.get('/folders', getFolders);
 router.post('/notes', createNote);
 router.put('/notes/:id', updateNote);
 router.delete('/notes/:id', deleteNote);
+router.post('/folders', createFolder);
+router.put('/folders/:oldName', renameFolder);
+router.delete('/folders/:name', deleteFolder);
 
 // ============================================
 // AI ROUTES - READY FOR CUSTOM AI INTEGRATION
