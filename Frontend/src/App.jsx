@@ -125,24 +125,28 @@ function App() {
   }, [selectedNote]);
 
   useEffect(() => {
-    if (selectedNote) {
-      setTitle(selectedNote.title);
-      setContent(selectedNote.content || '');
-      
-      // If switching notes while in drawing mode, save the current canvas first
-      if (isDrawing) {
-        const savedContent = saveCanvasToContent();
-        setIsDrawing(false);
-        console.log('Saved canvas before switching notes');
+    const switchNote = async () => {
+      if (selectedNote) {
+        setTitle(selectedNote.title);
+        setContent(selectedNote.content || '');
+        
+        // If switching notes while in drawing mode, save the current canvas first
+        if (isDrawing) {
+          await saveCanvasToContent();
+          setIsDrawing(false);
+          console.log('Saved canvas before switching notes');
+        }
+        
+        // Update the contentEditable div when note changes
+        if (contentEditableRef.current) {
+          contentEditableRef.current.innerHTML = selectedNote.content || '';
+          // Reattach image listeners after content loads
+          setTimeout(() => attachImageListeners(), 100);
+        }
       }
-      
-      // Update the contentEditable div when note changes
-      if (contentEditableRef.current) {
-        contentEditableRef.current.innerHTML = selectedNote.content || '';
-        // Reattach image listeners after content loads
-        setTimeout(() => attachImageListeners(), 100);
-      }
-    }
+    };
+    
+    switchNote();
   }, [selectedNote?.id]);
 
   useEffect(() => {
@@ -1427,7 +1431,7 @@ function App() {
     setShowDownloadMenu(false);
   };
 
-  const saveCanvasToContent = () => {
+  const saveCanvasToContent = async () => {
     // Save canvas as image to content
     const canvas = canvasRef.current;
     if (!canvas) {
@@ -1472,10 +1476,9 @@ function App() {
       }
       
       // Auto-save the note immediately
-      setTimeout(() => {
-        console.log('Auto-saving note after canvas save');
-        handleUpdateNote();
-      }, 200);
+      console.log('Auto-saving note after canvas save');
+      await handleUpdateNote();
+      console.log('Canvas content saved to database');
       
       return newContent; // Return the new content
     } else {
@@ -1484,15 +1487,16 @@ function App() {
     }
   };
 
-  const toggleDrawingMode = () => {
+  const toggleDrawingMode = async () => {
     if (!isDrawing) {
       // Entering drawing mode - save current content first
       if (contentEditableRef.current) {
         const currentContent = contentEditableRef.current.innerHTML;
         setContent(currentContent);
-        console.log('Saving text before entering draw mode');
+        console.log('Saving text before entering draw mode, length:', currentContent.length);
         // AUTO-SAVE: Save text content before switching to drawing
-        handleUpdateNote();
+        await handleUpdateNote();
+        console.log('Text saved successfully');
       }
       // Initialize canvas
       const canvas = canvasRef.current;
@@ -1544,17 +1548,13 @@ function App() {
           
           console.log('Drawing saved to content, length:', newContent.length);
           
-          // Save to database
-          setTimeout(() => {
-            console.log('Saving note with drawing to database');
-            handleUpdateNote();
-          }, 200);
+          // Save to database immediately
+          console.log('Saving note with drawing to database');
+          await handleUpdateNote();
+          console.log('Drawing saved to database successfully');
         } else {
           console.log('Canvas is blank, nothing to save');
-          // Just restore content without saving drawing
-          if (contentEditableRef.current) {
-            contentEditableRef.current.innerHTML = content;
-          }
+          // Keep existing content as-is, don't overwrite
         }
       }
       
@@ -2068,7 +2068,7 @@ function App() {
               <div className="drawing-toolbar">
                 <button 
                   className="tool-btn back-to-text"
-                  onClick={() => {
+                  onClick={async () => {
                     console.log('Back to text clicked');
                     const canvas = canvasRef.current;
                     if (!canvas) return;
@@ -2109,13 +2109,12 @@ function App() {
                       
                       console.log('Drawing saved to content, length:', newContent.length);
                       
-                      // Save to database
-                      setTimeout(() => {
-                        console.log('Saving note with drawing to database');
-                        handleUpdateNote();
-                      }, 200);
+                      // Save to database immediately
+                      console.log('Saving note with drawing to database');
+                      await handleUpdateNote();
+                      console.log('Drawing saved to database successfully');
                     } else {
-                      console.log('Canvas is blank, nothing to save');
+                      console.log('Canvas is blank, keeping existing content');
                     }
                     
                     // Exit drawing mode
