@@ -248,7 +248,11 @@ function App() {
     setAiSummary(null);
     
     try {
-      const response = await fetch(getApiUrl('ai/analyze-note'), {
+      console.log('🤖 Requesting AI summarization...');
+      console.log('📝 Note title:', title);
+      console.log('📄 Content length:', content.length);
+      
+      const response = await fetch(getApiUrl('ai/summarize'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -261,28 +265,29 @@ function App() {
       });
       
       const data = await response.json();
+      console.log('📡 AI Response:', data);
       
       if (data.success) {
-        setAiSummary(data);
+        console.log('✅ AI Summary received successfully');
+        setAiSummary({
+          summary: data.summary,
+          originalLength: data.originalLength,
+          summaryLength: data.summaryLength,
+          success: true
+        });
         setAiAvailable(true);
-      } else if (data.loading) {
-        setAiSummary({
-          error: data.error,
-          loading: true
-        });
-      } else if (data.need_install) {
-        setAiSummary({
-          error: data.error,
-          need_install: true
-        });
       } else {
+        console.error('❌ AI Summarization failed:', data.error);
         setAiSummary({
-          error: data.error || 'Failed to generate summary'
+          error: data.error || 'Failed to generate summary',
+          success: false
         });
       }
     } catch (error) {
+      console.error('❌ AI Request failed:', error);
       setAiSummary({
-        error: 'Could not connect to AI service. Please try again.'
+        error: 'Could not connect to AI service. Please ensure the backend is running.',
+        success: false
       });
     } finally {
       setAiLoading(false);
@@ -2563,28 +2568,23 @@ function App() {
                   <div className="ai-results">
                     <div className="ai-section">
                       <h3>📝 Summary</h3>
-                      <p>{aiSummary.summary}</p>
+                      <p style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>{aiSummary.summary}</p>
                     </div>
                     
-                    <div className="ai-section">
-                      <h3>🎯 Key Points</h3>
-                      <div className="ai-key-points">
-                        {aiSummary.key_points}
-                      </div>
+                    <div className="ai-stats" style={{ marginTop: '20px', padding: '12px', background: 'var(--sidebar-bg)', borderRadius: '8px' }}>
+                      <span>📊 Original: {aiSummary.originalLength} chars</span>
+                      <span style={{ margin: '0 12px' }}>→</span>
+                      <span>📝 Summary: {aiSummary.summaryLength} chars</span>
                     </div>
                     
-                    {aiSummary.image_descriptions && aiSummary.image_descriptions.length > 0 && (
-                      <div className="ai-section">
-                        <h3>🖼️ Images Detected ({aiSummary.image_count})</h3>
-                        {aiSummary.image_descriptions.map((desc, i) => (
-                          <p key={i} style={{ fontSize: '14px', marginBottom: '8px' }}>{desc}</p>
-                        ))}
-                      </div>
-                    )}
-                    
-                    <div className="ai-stats">
-                      <span>📊 {aiSummary.word_count} words</span>
-                      <span>🖼️ {aiSummary.image_count} images</span>
+                    <div style={{ marginTop: '16px', padding: '12px', background: 'var(--sidebar-bg)', borderRadius: '8px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                      <p style={{ margin: 0 }}>
+                        ⚠️ <strong>For Zenix Developer:</strong> This is using placeholder AI logic.
+                      </p>
+                      <p style={{ margin: '8px 0 0 0' }}>
+                        Replace the <code>summarizeNote()</code> function in<br/>
+                        <code>Backend/Services/aiService.js</code> with your offline AI model.
+                      </p>
                     </div>
                   </div>
                 ) : null}

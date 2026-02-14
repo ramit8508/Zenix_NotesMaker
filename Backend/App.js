@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser';
 import { PORT } from './Constant.js';
 import { deviceTracker } from './Middlewares/deviceTracker.js';
 import taskRoutes from './Routes/taskRoutes.js';
+import aiRoutes from './Routes/aiRoutes.js';
 
 const app = express();
 
@@ -21,6 +22,7 @@ app.use(deviceTracker);
 
 // Routes
 app.use('/api', taskRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
