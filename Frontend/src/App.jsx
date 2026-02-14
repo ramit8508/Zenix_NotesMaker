@@ -1756,21 +1756,20 @@ function App() {
     }
   };
 
-  // Auto-save when title or content changes
+  // Auto-save when title changes (content auto-saves via onInput/onBlur)
   useEffect(() => {
     if (selectedNote && selectedNote.id) {
-      // Check if content actually changed
       const titleChanged = title !== selectedNote.title;
-      const contentChanged = content !== selectedNote.content;
       
-      if (titleChanged || contentChanged) {
+      if (titleChanged && title) {
         const timeoutId = setTimeout(() => {
+          console.log('Auto-saving title change');
           handleUpdateNote();
-        }, 800); // Reduced from 1000ms for faster auto-save
+        }, 800);
         return () => clearTimeout(timeoutId);
       }
     }
-  }, [title, content, selectedNote?.id]);
+  }, [title, selectedNote?.id]);
 
   return (
     <>
@@ -2338,17 +2337,21 @@ function App() {
                   suppressContentEditableWarning
                   onInput={(e) => {
                     const newContent = e.currentTarget.innerHTML;
+                    console.log('Content changed, length:', newContent.length);
                     setContent(newContent);
                     // ✅ AUTO-SAVE: Debounced save after 1 second of no typing
                     if (window.autoSaveTimeout) clearTimeout(window.autoSaveTimeout);
                     window.autoSaveTimeout = setTimeout(() => {
-                      handleUpdateNote();
+                      console.log('Auto-saving content after typing');
+                      handleUpdateNote(newContent);
                     }, 1000);
                   }}
                   onBlur={(e) => {
-                    setContent(e.currentTarget.innerHTML);
+                    const currentContent = e.currentTarget.innerHTML;
+                    console.log('Content blur, saving immediately, length:', currentContent.length);
+                    setContent(currentContent);
                     // ✅ AUTO-SAVE: Save immediately on blur
-                    handleUpdateNote();
+                    handleUpdateNote(currentContent);
                   }}
                   data-placeholder="Start writing..."
                 />
