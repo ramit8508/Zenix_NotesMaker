@@ -2145,20 +2145,26 @@ function App() {
                       // Get current content from state
                       const newContent = content + imgTag;
                       
-                      // Update content state FIRST
+                      // Update content state AND contentEditable BEFORE exiting drawing mode
                       setContent(newContent);
                       
+                      // Update selectedNote content immediately
+                      if (selectedNote) {
+                        setSelectedNote(prev => ({
+                          ...prev,
+                          content: newContent
+                        }));
+                      }
+                      
                       console.log('Drawing saved to content, length:', newContent.length);
+                      console.log('Saving note with drawing to database NOW');
                       
-                      // Exit drawing mode - useEffect will update DOM
-                      setIsDrawing(false);
-                      
-                      // Save to database after a short delay
-                      setTimeout(async () => {
-                        console.log('Saving note with drawing to database');
-                        await handleUpdateNote();
-                        console.log('Drawing saved to database successfully');
-                      }, 100);
+                      // Save to database BEFORE switching mode
+                      handleUpdateNote().then(() => {
+                        console.log('✅ Drawing saved to database successfully');
+                        // NOW exit drawing mode after save completes
+                        setIsDrawing(false);
+                      });
                     } else {
                       console.log('Canvas is blank, keeping existing content');
                       // Just exit drawing mode
@@ -2174,29 +2180,26 @@ function App() {
                 <button 
                   className="tool-btn"
                   onClick={() => {
-                    if (!selectedNote) return;
+                    const canvas = canvasRef.current;
+                    if (!canvas) return;
                     
-                    // Get the current content
-                    const textContent = contentEditableRef.current 
-                      ? contentEditableRef.current.innerText 
-                      : selectedNote.content.replace(/<[^>]*>/g, '');
-                    
-                    // Create and download text file
-                    const blob = new Blob([textContent], { type: 'text/plain' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `${selectedNote.title || 'note'}-${Date.now()}.txt`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                    console.log('Note exported as text file');
+                    // Export canvas as PNG image
+                    canvas.toBlob((blob) => {
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `drawing-${Date.now()}.png`;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                      console.log('Canvas exported as PNG');
+                    }, 'image/png');
                   }}
-                  title="Export note as text file"
+                  title="Export canvas as PNG image"
                   style={{ backgroundColor: '#34C759', color: 'white', fontWeight: '600' }}
                 >
-                  ↓ Export Text
+                  ↓ Export PNG
                 </button>
                 
                 <div className="toolbar-divider"></div>
