@@ -131,8 +131,9 @@ function App() {
       
       // If switching notes while in drawing mode, save the current canvas first
       if (isDrawing) {
-        saveCanvasToContent();
+        const savedContent = saveCanvasToContent();
         setIsDrawing(false);
+        console.log('Saved canvas before switching notes');
       }
       
       // Update the contentEditable div when note changes
@@ -1431,7 +1432,7 @@ function App() {
     const canvas = canvasRef.current;
     if (!canvas) {
       console.log('No canvas to save');
-      return;
+      return null;
     }
     
     const ctx = canvas.getContext('2d');
@@ -1472,9 +1473,12 @@ function App() {
       setTimeout(() => {
         console.log('Auto-saving note after canvas save');
         handleUpdateNote();
-      }, 100);
+      }, 200);
+      
+      return newContent; // Return the new content
     } else {
       console.log('Canvas is blank, nothing to save');
+      return content; // Return existing content if canvas is blank
     }
   };
 
@@ -1500,24 +1504,57 @@ function App() {
     } else {
       // Exiting drawing mode - auto-save canvas as image
       console.log('Exiting drawing mode, saving canvas...');
-      saveCanvasToContent();
-      setIsDrawing(false);
       
-      // Restore text content when switching back
-      setTimeout(() => {
-        if (contentEditableRef.current) {
-          const currentContent = contentEditableRef.current.innerHTML;
-          console.log('Restored content length:', currentContent.length);
-          if (!currentContent) {
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const pixels = imageData.data;
+        const bgColor = theme === 'dark' ? [28, 28, 30] : [242, 242, 247];
+        let hasContent = false;
+        
+        for (let i = 0; i < pixels.length; i += 4) {
+          const r = pixels[i];
+          const g = pixels[i + 1];
+          const b = pixels[i + 2];
+          if (Math.abs(r - bgColor[0]) > 5 || Math.abs(g - bgColor[1]) > 5 || Math.abs(b - bgColor[2]) > 5) {
+            hasContent = true;
+            break;
+          }
+        }
+        
+        if (hasContent) {
+          console.log('Saving canvas drawing to note');
+          const dataURL = canvas.toDataURL('image/png');
+          const imgTag = `<img src="${dataURL}" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; display: block;" class="draggable-img" /><br>`;
+          const newContent = content + imgTag;
+          
+          // Update content state
+          setContent(newContent);
+          
+          // Update contentEditable immediately with the new content
+          if (contentEditableRef.current) {
+            contentEditableRef.current.innerHTML = newContent;
+            setTimeout(() => attachImageListeners(), 50);
+          }
+          
+          console.log('Drawing saved to content, length:', newContent.length);
+          
+          // Save to database
+          setTimeout(() => {
+            console.log('Saving note with drawing to database');
+            handleUpdateNote();
+          }, 200);
+        } else {
+          console.log('Canvas is blank, nothing to save');
+          // Just restore content without saving drawing
+          if (contentEditableRef.current) {
             contentEditableRef.current.innerHTML = content;
           }
         }
-      }, 50);
+      }
       
-      // AUTO-SAVE: Save drawing content immediately after switching back to text
-      setTimeout(() => {
-        console.log('Auto-saving after drawing mode exit');
-        handleUpdateNote();
+      setIsDrawing(false);
       }, 200);
     }
   };
@@ -1992,14 +2029,9 @@ function App() {
                   className={`icon-btn ${!isDrawing ? 'active' : ''}`}
                   onClick={() => {
                     if (isDrawing) {
-                      saveCanvasToContent();
+                      const savedContent = saveCanvasToContent();
                       setIsDrawing(false);
-                      // Restore text content when switching to text mode
-                      setTimeout(() => {
-                        if (contentEditableRef.current && content) {
-                          contentEditableRef.current.innerHTML = content;
-                        }
-                      }, 50);
+                      console.log('Switched to text mode, saved content length:', savedContent?.length || 0);
                     }
                   }}
                   title="Text Mode - Type with keyboard"
@@ -2035,19 +2067,84 @@ function App() {
                   className="tool-btn back-to-text"
                   onClick={() => {
                     console.log('Back to text clicked');
-                    saveCanvasToContent();
-                    setIsDrawing(false);
-                    setTimeout(() => {
-                      if (contentEditableRef.current && content) {
-                        contentEditableRef.current.innerHTML = content;
+                    const canvas = canvasRef.current;
+                    if (!canvas) return;
+                    
+                    // Save canvas to content
+                    const ctx = canvas.getContext('2d');
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const pixels = imageData.data;
+                    const bgColor = theme === 'dark' ? [28, 28, 30] : [242, 242, 247];
+                    let hasContent = false;
+                    
+                    for (let i = 0; i < pixels.length; i += 4) {
+                      const r = pixels[i];
+                      const g = pixels[i + 1];
+                      const b = pixels[i + 2];
+                      if (Math.abs(r - bgColor[0]) > 5 || Math.abs(g - bgColor[1]) > 5 || Math.abs(b - bgColor[2]) > 5) {
+                        hasContent = true;
+                        break;
                       }
-                      handleUpdateNote();
-                    }, 100);
+                    }
+                    
+                    if (hasContent) {
+                      console.log('Saving canvas drawing to note');
+                      const dataURL = canvas.toDataURL('image/png');
+                      const imgTag = `<img src="${dataURL}" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; display: block;" class="draggable-img" /><br>`;
+                      const newContent = content + imgTag;
+                      
+                      // Update content state
+                      setContent(newContent);
+                      
+                      // Update contentEditable immediately with the new content
+                      if (contentEditableRef.current) {
+                        contentEditableRef.current.innerHTML = newContent;
+                        setTimeout(() => attachImageListeners(), 50);
+                      }
+                      
+                      console.log('Drawing saved to content, length:', newContent.length);
+                      
+                      // Save to database
+                      setTimeout(() => {
+                        console.log('Saving note with drawing to database');
+                        handleUpdateNote();
+                      }, 200);
+                    } else {
+                      console.log('Canvas is blank, nothing to save');
+                    }
+                    
+                    // Exit drawing mode
+                    setIsDrawing(false);
                   }}
                   title="Save drawing and return to text"
                   style={{ backgroundColor: 'var(--accent-color)', color: 'white', fontWeight: '600' }}
                 >
                   ← Back to Text
+                </button>
+                
+                <button 
+                  className="tool-btn"
+                  onClick={() => {
+                    const canvas = canvasRef.current;
+                    if (!canvas) return;
+                    
+                    // Convert canvas to blob and download
+                    canvas.toBlob((blob) => {
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `drawing-${Date.now()}.png`;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                      console.log('Canvas exported as PNG');
+                    }, 'image/png');
+                  }}
+                  title="Export drawing as PNG file"
+                  style={{ backgroundColor: '#34C759', color: 'white', fontWeight: '600' }}
+                >
+                  ↓ Export PNG
                 </button>
                 
                 <div className="toolbar-divider"></div>
