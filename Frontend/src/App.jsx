@@ -1429,41 +1429,52 @@ function App() {
   const saveCanvasToContent = () => {
     // Save canvas as image to content
     const canvas = canvasRef.current;
-    if (canvas) {
-      const ctx = canvas.getContext('2d');
+    if (!canvas) {
+      console.log('No canvas to save');
+      return;
+    }
+    
+    const ctx = canvas.getContext('2d');
+    
+    // Check if canvas has any content (not just blank)
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const pixels = imageData.data;
+    const bgColor = theme === 'dark' ? [28, 28, 30] : [242, 242, 247];
+    let hasContent = false;
+    
+    for (let i = 0; i < pixels.length; i += 4) {
+      const r = pixels[i];
+      const g = pixels[i + 1];
+      const b = pixels[i + 2];
+      // Check if pixel is different from background
+      if (Math.abs(r - bgColor[0]) > 5 || Math.abs(g - bgColor[1]) > 5 || Math.abs(b - bgColor[2]) > 5) {
+        hasContent = true;
+        break;
+      }
+    }
+    
+    if (hasContent) {
+      console.log('Saving canvas with content to note');
+      const dataURL = canvas.toDataURL('image/png');
+      const imgTag = `<img src="${dataURL}" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; display: block;" class="draggable-img" /><br>`;
+      const newContent = content + imgTag;
+      setContent(newContent);
       
-      // Check if canvas has any content (not just blank)
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const pixels = imageData.data;
-      const bgColor = theme === 'dark' ? [28, 28, 30] : [242, 242, 247];
-      let hasContent = false;
+      console.log('Canvas saved, new content length:', newContent.length);
       
-      for (let i = 0; i < pixels.length; i += 4) {
-        const r = pixels[i];
-        const g = pixels[i + 1];
-        const b = pixels[i + 2];
-        // Check if pixel is different from background
-        if (Math.abs(r - bgColor[0]) > 5 || Math.abs(g - bgColor[1]) > 5 || Math.abs(b - bgColor[2]) > 5) {
-          hasContent = true;
-          break;
-        }
+      // Update contentEditable div immediately
+      if (contentEditableRef.current) {
+        contentEditableRef.current.innerHTML = newContent;
+        setTimeout(() => attachImageListeners(), 50);
       }
       
-      if (hasContent) {
-        const dataURL = canvas.toDataURL('image/png');
-        const imgTag = `<img src="${dataURL}" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; display: block;" class="draggable-img" /><br>`;
-        const newContent = content + imgTag;
-        setContent(newContent);
-        
-        // Update contentEditable div immediately
-        if (contentEditableRef.current) {
-          contentEditableRef.current.innerHTML = newContent;
-          setTimeout(() => attachImageListeners(), 50);
-        }
-        
-        // Auto-save the note
-        setTimeout(() => handleUpdateNote(), 100);
-      }
+      // Auto-save the note immediately
+      setTimeout(() => {
+        console.log('Auto-saving note after canvas save');
+        handleUpdateNote();
+      }, 100);
+    } else {
+      console.log('Canvas is blank, nothing to save');
     }
   };
 
@@ -1473,6 +1484,7 @@ function App() {
       if (contentEditableRef.current) {
         const currentContent = contentEditableRef.current.innerHTML;
         setContent(currentContent);
+        console.log('Saving text before entering draw mode');
         // AUTO-SAVE: Save text content before switching to drawing
         handleUpdateNote();
       }
@@ -1484,20 +1496,29 @@ function App() {
         ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
       setIsDrawing(true);
+      console.log('Entered drawing mode');
     } else {
       // Exiting drawing mode - auto-save canvas as image
+      console.log('Exiting drawing mode, saving canvas...');
       saveCanvasToContent();
       setIsDrawing(false);
       
       // Restore text content when switching back
       setTimeout(() => {
-        if (contentEditableRef.current && content) {
-          contentEditableRef.current.innerHTML = content;
+        if (contentEditableRef.current) {
+          const currentContent = contentEditableRef.current.innerHTML;
+          console.log('Restored content length:', currentContent.length);
+          if (!currentContent) {
+            contentEditableRef.current.innerHTML = content;
+          }
         }
       }, 50);
       
       // AUTO-SAVE: Save drawing content immediately after switching back to text
-      setTimeout(() => handleUpdateNote(), 200);
+      setTimeout(() => {
+        console.log('Auto-saving after drawing mode exit');
+        handleUpdateNote();
+      }, 200);
     }
   };
 
@@ -1791,15 +1812,43 @@ function App() {
                 return (
                   <div key={index}>
                     {isRenaming ? (
-                      <div className="new-folder-input" style={{ padding: '4px 20px' }}>
+                      <div className="new-folder-input" style={{ padding: '4px 20px', display: 'flex', alignItems: 'center', gap: '5px' }}>
                         <input
                           type="text"
                           value={newFolderRename}
                           onChange={(e) => setNewFolderRename(e.target.value)}
-                          onKeyPress={(e) => e.key === 'Enter' && confirmRenameFolder()}
-                          onBlur={confirmRenameFolder}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              confirmRenameFolder();
+                            }
+                            if (e.key === 'Escape') {
+                              e.preventDefault();
+                              setRenamingFolder(null);
+                              setNewFolderRename('');
+                            }
+                          }}
                           autoFocus
                         />
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            confirmRenameFolder();
+                          }}
+                          style={{ padding: '2px 8px', fontSize: '12px' }}
+                        >
+                          ✓
+                        </button>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setRenamingFolder(null);
+                            setNewFolderRename('');
+                          }}
+                          style={{ padding: '2px 8px', fontSize: '12px' }}
+                        >
+                          ✕
+                        </button>
                       </div>
                     ) : (
                       <div 
@@ -1982,6 +2031,27 @@ function App() {
             
             {isDrawing && (
               <div className="drawing-toolbar">
+                <button 
+                  className="tool-btn back-to-text"
+                  onClick={() => {
+                    console.log('Back to text clicked');
+                    saveCanvasToContent();
+                    setIsDrawing(false);
+                    setTimeout(() => {
+                      if (contentEditableRef.current && content) {
+                        contentEditableRef.current.innerHTML = content;
+                      }
+                      handleUpdateNote();
+                    }, 100);
+                  }}
+                  title="Save drawing and return to text"
+                  style={{ backgroundColor: 'var(--accent-color)', color: 'white', fontWeight: '600' }}
+                >
+                  ← Back to Text
+                </button>
+                
+                <div className="toolbar-divider"></div>
+                
                 <button 
                   className={`tool-btn ${drawingMode === 'pen' ? 'active' : ''}`}
                   onClick={() => setDrawingMode('pen')}
