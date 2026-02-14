@@ -115,14 +115,23 @@ export const createNote = (req, res) => {
 export const updateNote = (req, res) => {
   try {
     const { id } = req.params;
+    console.log('updateNote: ID', id, 'deviceId:', req.deviceId, 'body:', { 
+      title: req.body.title, 
+      contentLength: req.body.content?.length || 0,
+      folder: req.body.folder 
+    });
+    
     const note = Note.update(id, req.deviceId, req.body);
     
     if (!note) {
+      console.log('updateNote: Note not found for ID', id);
       return res.status(404).json({ success: false, error: 'Note not found' });
     }
 
+    console.log('updateNote: Success, note ID', note.id);
     res.json({ success: true, data: note });
   } catch (error) {
+    console.error('updateNote: Error:', error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 };

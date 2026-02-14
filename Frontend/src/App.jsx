@@ -746,15 +746,16 @@ function App() {
     }
   }, [showDownloadMenu]);
 
-  const handleUpdateNote = async (contentToSave = null) => {
-    if (!selectedNote) return;
+  const handleUpdateNote = async () => {
+    if (!selectedNote) {
+      console.log('handleUpdateNote: no note selected');
+      return;
+    }
 
-    // Get the actual content from contentEditable div or use provided content
-    const actualContent = contentToSave !== null 
-      ? contentToSave 
-      : (contentEditableRef.current ? contentEditableRef.current.innerHTML : content);
+    // Always get fresh content from DOM
+    const actualContent = contentEditableRef.current ? contentEditableRef.current.innerHTML : content;
 
-    console.log('handleUpdateNote called, content length:', actualContent.length);
+    console.log('handleUpdateNote: saving note ID', selectedNote.id, 'content length:', actualContent.length, 'title:', title);
 
     try {
       const response = await fetch(getApiUrl(`notes/${selectedNote.id}`), {
@@ -771,7 +772,7 @@ function App() {
 
       const data = await response.json();
       if (data.success) {
-        console.log('Note updated:', data.data);
+        console.log('✅ Note saved successfully, ID:', selectedNote.id);
         // Update the content state to match what was saved
         setContent(actualContent);
         
@@ -1479,9 +1480,9 @@ function App() {
         setTimeout(() => attachImageListeners(), 50);
       }
       
-      // Auto-save the note immediately with the new content
+      // Auto-save the note immediately
       console.log('Auto-saving note after canvas save');
-      await handleUpdateNote(newContent);
+      await handleUpdateNote();
       console.log('Canvas content saved to database');
       
       return newContent; // Return the new content
@@ -1499,7 +1500,7 @@ function App() {
         setContent(currentContent);
         console.log('Saving text before entering draw mode, length:', currentContent.length);
         // AUTO-SAVE: Save text content before switching to drawing
-        await handleUpdateNote(currentContent);
+        await handleUpdateNote();
         console.log('Text saved successfully');
       }
       // Initialize canvas
@@ -1552,9 +1553,9 @@ function App() {
           
           console.log('Drawing saved to content, length:', newContent.length);
           
-          // Save to database immediately with the new content
+          // Save to database immediately
           console.log('Saving note with drawing to database');
-          await handleUpdateNote(newContent);
+          await handleUpdateNote();
           console.log('Drawing saved to database successfully');
         } else {
           console.log('Canvas is blank, nothing to save');
@@ -2112,9 +2113,9 @@ function App() {
                       
                       console.log('Drawing saved to content, length:', newContent.length);
                       
-                      // Save to database immediately with the new content
+                      // Save to database immediately
                       console.log('Saving note with drawing to database');
-                      await handleUpdateNote(newContent);
+                      await handleUpdateNote();
                       console.log('Drawing saved to database successfully');
                     } else {
                       console.log('Canvas is blank, keeping existing content');
@@ -2343,7 +2344,7 @@ function App() {
                     if (window.autoSaveTimeout) clearTimeout(window.autoSaveTimeout);
                     window.autoSaveTimeout = setTimeout(() => {
                       console.log('Auto-saving content after typing');
-                      handleUpdateNote(newContent);
+                      handleUpdateNote();
                     }, 1000);
                   }}
                   onBlur={(e) => {
@@ -2351,7 +2352,8 @@ function App() {
                     console.log('Content blur, saving immediately, length:', currentContent.length);
                     setContent(currentContent);
                     // ✅ AUTO-SAVE: Save immediately on blur
-                    handleUpdateNote(currentContent);
+                    if (window.autoSaveTimeout) clearTimeout(window.autoSaveTimeout);
+                    handleUpdateNote();
                   }}
                   data-placeholder="Start writing..."
                 />
