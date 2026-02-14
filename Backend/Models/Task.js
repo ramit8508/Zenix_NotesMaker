@@ -17,6 +17,9 @@ class Note {
       VALUES (?, ?, ?, ?)
     `);
     const result = stmt.run(deviceId, title || 'Untitled Note', content || '', folder || 'Notes');
+    console.log('Note created with ID:', result.lastInsertRowid);
+    // Force WAL checkpoint to write to database file
+    db.pragma('wal_checkpoint(FULL)');
     return this.getById(result.lastInsertRowid);
   }
 
@@ -35,7 +38,10 @@ class Note {
           updated_at = CURRENT_TIMESTAMP
       WHERE id = ? AND device_id = ?
     `);
-    stmt.run(title, content, folder, id, deviceId);
+    const result = stmt.run(title, content, folder, id, deviceId);
+    console.log('Note updated, changes:', result.changes);
+    // Force WAL checkpoint to write to database file
+    db.pragma('wal_checkpoint(FULL)');
     return this.getById(id);
   }
 
@@ -112,6 +118,10 @@ class Note {
     `);
     const result2 = stmt2.run(newName, deviceId, oldName);
     console.log('Updated notes table, changes:', result2.changes);
+    
+    // Force WAL checkpoint to write to database file
+    db.pragma('wal_checkpoint(FULL)');
+    console.log('Database checkpoint completed');
     
     return true;
   }

@@ -12,17 +12,25 @@ let dbPath;
 if (process.env.IS_PACKAGED === 'true') {
   // In packaged app, use user data directory (writable location)
   const userDataDir = path.join(os.homedir(), '.notesmaker');
+  console.log('📁 Creating user data directory:', userDataDir);
   if (!fs.existsSync(userDataDir)) {
     fs.mkdirSync(userDataDir, { recursive: true });
+    console.log('✅ Directory created');
+  } else {
+    console.log('✅ Directory already exists');
   }
   dbPath = path.join(userDataDir, 'tasks.db');
-  console.log('📁 Using user data directory for database:', dbPath);
+  console.log('📁 Database path:', dbPath);
+  console.log('📁 Database exists?', fs.existsSync(dbPath));
 } else {
   // In development, use local directory
   dbPath = path.join(__dirname, 'tasks.db');
+  console.log('📁 Development database path:', dbPath);
 }
 
+console.log('🔧 Opening database...');
 const db = new Database(dbPath);
+console.log('✅ Database opened successfully');
 
 // Enable WAL mode for better concurrency and durability
 db.pragma('journal_mode = WAL');
