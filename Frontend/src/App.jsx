@@ -1555,7 +1555,6 @@ function App() {
       }
       
       setIsDrawing(false);
-      }, 200);
     }
   };
 
