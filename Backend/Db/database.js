@@ -24,6 +24,9 @@ if (process.env.IS_PACKAGED === 'true') {
 
 const db = new Database(dbPath);
 
+// Enable WAL mode for better concurrency and durability
+db.pragma('journal_mode = WAL');
+db.pragma('synchronous = FULL');
 // Enable foreign keys
 db.pragma('foreign_keys = ON');
 

@@ -361,14 +361,15 @@ function App() {
         // Immediately add to notes array for instant UI update
         const newNote = data.data;
         setNotes(prevNotes => {
-          console.log('Adding new note to array, prev length:', prevNotes.length);
-          return [...prevNotes, newNote];
+          console.log('Adding new note to array, prev length:', prevNotes.length, 'new length:', prevNotes.length + 1);
+          const updated = [...prevNotes, newNote];
+          console.log('Updated notes array:', updated.map(n => ({ id: n.id, title: n.title, folder: n.folder })));
+          return updated;
         });
         
-        // Refresh all data
+        // Refresh stats and folders (but NOT notes to avoid overwriting)
         await fetchStats();
         await fetchFolders();
-        setTimeout(() => fetchNotes(), 100); // Re-fetch to ensure consistency
         
         // Select the new note
         setSelectedNote(newNote);
@@ -529,6 +530,18 @@ function App() {
 
       const data = await response.json();
       if (data.success) {
+        console.log('Folder renamed from', oldName, 'to', newName);
+        
+        // Update all notes with this folder
+        setNotes(prevNotes => {
+          const updated = prevNotes.map(note => 
+            note.folder === oldName 
+              ? { ...note, folder: newName }
+              : note
+          );
+          return [...updated];
+        });
+        
         // If this folder was selected, update selection
         if (selectedFolder === oldName) {
           setSelectedFolder(newName);
@@ -537,7 +550,8 @@ function App() {
         // Reset renaming state
         setRenamingFolder(null);
         setNewFolderRename('');
-        await fetchNotes();
+        
+        // Refresh folders list
         await fetchFolders();
       } else {
         alert(data.error || 'Failed to rename folder');
@@ -573,12 +587,23 @@ function App() {
 
       const data = await response.json();
       if (data.success) {
+        console.log('Folder deleted:', folderName);
+        
+        // Move all notes from deleted folder to 'Personal'
+        setNotes(prevNotes => {
+          const updated = prevNotes.map(note => 
+            note.folder === folderName 
+              ? { ...note, folder: 'Personal' }
+              : note
+          );
+          return [...updated];
+        });
+        
         // Reset selection if this folder was selected
         if (selectedFolder === folderName) {
           setSelectedFolder(null);
         }
         
-        await fetchNotes();
         await fetchFolders();
       } else {
         alert(data.error || 'Failed to delete folder');
@@ -613,28 +638,28 @@ function App() {
       if (data.success) {
         console.log('Created note in folder:', folderName, data.data);
         
-        // Force refresh everything and wait for completion
-        const updatedNotes = await fetchNotes();
+        // Immediately add to notes array
+        const newNote = data.data;
+        setNotes(prevNotes => {
+          console.log('Adding note to folder, prev length:', prevNotes.length);
+          const updated = [...prevNotes, newNote];
+          console.log('Updated notes array:', updated.map(n => ({ id: n.id, title: n.title, folder: n.folder })));
+          return updated;
+        });
+        
+        // Refresh stats and folders only
         await fetchStats();
         await fetchFolders();
         
-        console.log('Updated notes:', updatedNotes);
         console.log('Setting folder to:', folderName);
         
         // Set folder and note selection immediately
         setSelectedFolder(folderName);
-        
-        // Find the created note in the updated notes list
-        const createdNote = updatedNotes.find(n => n.id === data.data.id);
-        if (createdNote) {
-          setSelectedNote(createdNote);
-          setTitle(createdNote.title);
-          setContent(createdNote.content || '');
-          if (contentEditableRef.current) {
-            contentEditableRef.current.innerHTML = createdNote.content || '';
-          }
-        } else {
-          console.error('Created note not found in updated notes list');
+        setSelectedNote(newNote);
+        setTitle(newNote.title);
+        setContent(newNote.content || '');
+        if (contentEditableRef.current) {
+          contentEditableRef.current.innerHTML = newNote.content || '';
         }
       }
     } catch (error) {
@@ -685,10 +710,29 @@ function App() {
 
       const data = await response.json();
       if (data.success) {
+        console.log('Note updated:', data.data);
         // Update the content state to match what was saved
         setContent(actualContent);
-        // Refresh notes list to show updated note
-        await fetchNotes();
+        
+        // Optimistically update the notes array
+        setNotes(prevNotes => {
+          const updated = prevNotes.map(note => 
+            note.id === selectedNote.id 
+              ? { ...note, title: title || 'Untitled Note', content: actualContent, updated_at: new Date().toISOString() }
+              : note
+          );
+          return [...updated]; // Force new array reference
+        });
+        
+        // Update selected note
+        setSelectedNote(prev => ({
+          ...prev,
+          title: title || 'Untitled Note',
+          content: actualContent,
+          updated_at: new Date().toISOString()
+        }));
+        
+        // Refresh folders for count updates
         await fetchFolders();
       }
     } catch (error) {
@@ -709,10 +753,20 @@ function App() {
 
       const data = await response.json();
       if (data.success) {
+        console.log('Note deleted:', selectedNote.id);
+        
+        // Remove from notes array
+        setNotes(prevNotes => prevNotes.filter(note => note.id !== selectedNote.id));
+        
+        // Clear selection
         setSelectedNote(null);
         setTitle('');
         setContent('');
-        await fetchNotes();
+        if (contentEditableRef.current) {
+          contentEditableRef.current.innerHTML = '';
+        }
+        
+        // Refresh stats and folders
         await fetchStats();
         await fetchFolders();
       }
