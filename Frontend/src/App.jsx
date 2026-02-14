@@ -1458,7 +1458,9 @@ function App() {
       console.log('Saving canvas with content to note');
       const dataURL = canvas.toDataURL('image/png');
       const imgTag = `<img src="${dataURL}" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; display: block;" class="draggable-img" /><br>`;
-      const newContent = content + imgTag;
+      // Get current content from DOM to avoid using stale state
+      const currentContent = contentEditableRef.current ? contentEditableRef.current.innerHTML : content;
+      const newContent = currentContent + imgTag;
       setContent(newContent);
       
       console.log('Canvas saved, new content length:', newContent.length);
@@ -1527,7 +1529,9 @@ function App() {
           console.log('Saving canvas drawing to note');
           const dataURL = canvas.toDataURL('image/png');
           const imgTag = `<img src="${dataURL}" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; display: block;" class="draggable-img" /><br>`;
-          const newContent = content + imgTag;
+          // Get current content from DOM to avoid using stale state
+          const currentContent = contentEditableRef.current ? contentEditableRef.current.innerHTML : content;
+          const newContent = currentContent + imgTag;
           
           // Update content state
           setContent(newContent);
@@ -2090,7 +2094,9 @@ function App() {
                       console.log('Saving canvas drawing to note');
                       const dataURL = canvas.toDataURL('image/png');
                       const imgTag = `<img src="${dataURL}" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; display: block;" class="draggable-img" /><br>`;
-                      const newContent = content + imgTag;
+                      // Get current content from DOM to avoid using stale state
+                      const currentContent = contentEditableRef.current ? contentEditableRef.current.innerHTML : content;
+                      const newContent = currentContent + imgTag;
                       
                       // Update content state
                       setContent(newContent);
@@ -2124,26 +2130,29 @@ function App() {
                 <button 
                   className="tool-btn"
                   onClick={() => {
-                    const canvas = canvasRef.current;
-                    if (!canvas) return;
+                    if (!selectedNote) return;
                     
-                    // Convert canvas to blob and download
-                    canvas.toBlob((blob) => {
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `drawing-${Date.now()}.png`;
-                      document.body.appendChild(a);
-                      a.click();
-                      document.body.removeChild(a);
-                      URL.revokeObjectURL(url);
-                      console.log('Canvas exported as PNG');
-                    }, 'image/png');
+                    // Get the current content
+                    const textContent = contentEditableRef.current 
+                      ? contentEditableRef.current.innerText 
+                      : selectedNote.content.replace(/<[^>]*>/g, '');
+                    
+                    // Create and download text file
+                    const blob = new Blob([textContent], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${selectedNote.title || 'note'}-${Date.now()}.txt`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    console.log('Note exported as text file');
                   }}
-                  title="Export drawing as PNG file"
+                  title="Export note as text file"
                   style={{ backgroundColor: '#34C759', color: 'white', fontWeight: '600' }}
                 >
-                  ↓ Export PNG
+                  ↓ Export Text
                 </button>
                 
                 <div className="toolbar-divider"></div>
