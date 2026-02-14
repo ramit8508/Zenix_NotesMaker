@@ -173,6 +173,15 @@ function App() {
     }
   }, [theme]);
 
+  // Update contentEditable when switching back from drawing mode
+  useEffect(() => {
+    if (!isDrawing && contentEditableRef.current && content) {
+      console.log('🔄 Restoring content to editor after exiting drawing mode, length:', content.length);
+      contentEditableRef.current.innerHTML = content;
+      setTimeout(() => attachImageListeners(), 100);
+    }
+  }, [isDrawing]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -1504,23 +1513,18 @@ function App() {
       console.log('Saving canvas with content to note');
       const dataURL = canvas.toDataURL('image/png');
       const imgTag = `<img src="${dataURL}" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; display: block;" class="draggable-img" /><br>`;
-      // Get current content from DOM to avoid using stale state
-      const currentContent = contentEditableRef.current ? contentEditableRef.current.innerHTML : content;
-      const newContent = currentContent + imgTag;
+      // Get current content from state
+      const newContent = content + imgTag;
       setContent(newContent);
       
       console.log('Canvas saved, new content length:', newContent.length);
       
-      // Update contentEditable div immediately
-      if (contentEditableRef.current) {
-        contentEditableRef.current.innerHTML = newContent;
-        setTimeout(() => attachImageListeners(), 50);
-      }
-      
-      // Auto-save the note immediately
-      console.log('Auto-saving note after canvas save');
-      await handleUpdateNote();
-      console.log('Canvas content saved to database');
+      // Auto-save the note after a short delay
+      setTimeout(async () => {
+        console.log('Auto-saving note after canvas save');
+        await handleUpdateNote();
+        console.log('Canvas content saved to database');
+      }, 100);
       
       return newContent; // Return the new content
     } else {
@@ -1575,32 +1579,32 @@ function App() {
           console.log('Saving canvas drawing to note');
           const dataURL = canvas.toDataURL('image/png');
           const imgTag = `<img src="${dataURL}" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; display: block;" class="draggable-img" /><br>`;
-          // Get current content from DOM to avoid using stale state
-          const currentContent = contentEditableRef.current ? contentEditableRef.current.innerHTML : content;
-          const newContent = currentContent + imgTag;
+          // Get current content from state (not DOM, since contentEditable is unmounted)
+          const newContent = content + imgTag;
           
-          // Update content state
+          // Update content state FIRST
           setContent(newContent);
           
-          // Update contentEditable immediately with the new content
-          if (contentEditableRef.current) {
-            contentEditableRef.current.innerHTML = newContent;
-            setTimeout(() => attachImageListeners(), 50);
-          }
+          console.log('Drawing saved to content, length:', newContent.length
+);
           
-          console.log('Drawing saved to content, length:', newContent.length);
+          // Exit drawing mode - the useEffect will update contentEditable
+          setIsDrawing(false);
           
-          // Save to database immediately
-          console.log('Saving note with drawing to database');
-          await handleUpdateNote();
-          console.log('Drawing saved to database successfully');
+          // Save to database after a short delay to let React update
+          setTimeout(async () => {
+            console.log('Saving note with drawing to database');
+            await handleUpdateNote();
+            console.log('Drawing saved to database successfully');
+          }, 100);
         } else {
           console.log('Canvas is blank, nothing to save');
-          // Keep existing content as-is, don't overwrite
+          // Just exit drawing mode without saving canvas
+          setIsDrawing(false);
         }
       }
       
-      setIsDrawing(false);
+      // Don't call setIsDrawing(false) here - already done above
     }
   };
 
@@ -2109,10 +2113,13 @@ function App() {
               <div className="drawing-toolbar">
                 <button 
                   className="tool-btn back-to-text"
-                  onClick={async () => {
+                  onClick={() => {
                     console.log('Back to text clicked');
                     const canvas = canvasRef.current;
-                    if (!canvas) return;
+                    if (!canvas) {
+                      setIsDrawing(false);
+                      return;
+                    }
                     
                     // Save canvas to content
                     const ctx = canvas.getContext('2d');
@@ -2135,31 +2142,28 @@ function App() {
                       console.log('Saving canvas drawing to note');
                       const dataURL = canvas.toDataURL('image/png');
                       const imgTag = `<img src="${dataURL}" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; display: block;" class="draggable-img" /><br>`;
-                      // Get current content from DOM to avoid using stale state
-                      const currentContent = contentEditableRef.current ? contentEditableRef.current.innerHTML : content;
-                      const newContent = currentContent + imgTag;
+                      // Get current content from state
+                      const newContent = content + imgTag;
                       
-                      // Update content state
+                      // Update content state FIRST
                       setContent(newContent);
-                      
-                      // Update contentEditable immediately with the new content
-                      if (contentEditableRef.current) {
-                        contentEditableRef.current.innerHTML = newContent;
-                        setTimeout(() => attachImageListeners(), 50);
-                      }
                       
                       console.log('Drawing saved to content, length:', newContent.length);
                       
-                      // Save to database immediately
-                      console.log('Saving note with drawing to database');
-                      await handleUpdateNote();
-                      console.log('Drawing saved to database successfully');
+                      // Exit drawing mode - useEffect will update DOM
+                      setIsDrawing(false);
+                      
+                      // Save to database after a short delay
+                      setTimeout(async () => {
+                        console.log('Saving note with drawing to database');
+                        await handleUpdateNote();
+                        console.log('Drawing saved to database successfully');
+                      }, 100);
                     } else {
                       console.log('Canvas is blank, keeping existing content');
+                      // Just exit drawing mode
+                      setIsDrawing(false);
                     }
-                    
-                    // Exit drawing mode
-                    setIsDrawing(false);
                   }}
                   title="Save drawing and return to text"
                   style={{ backgroundColor: 'var(--accent-color)', color: 'white', fontWeight: '600' }}
