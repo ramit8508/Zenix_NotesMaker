@@ -1,16 +1,6 @@
 import fetch from 'node-fetch';
 
-// ============================================
-// AI SERVICE STUB - READY FOR CUSTOM AI
-// ============================================
-// Your friend can implement the AI service here!
-// This stub keeps the routing intact while AI implementation is pending.
-// 
-// TO INTEGRATE CUSTOM AI:
-// 1. Implement your AI service (built-in AI from OS)
-// 2. Replace the placeholders below with actual calls to your AI
-// 3. Update the AI_SERVICE_URL if needed
-// ============================================
+
 
 const AI_SERVICE_URL = 'http://localhost:5001'; // Change this to your AI service URL
 
@@ -36,10 +26,7 @@ export const checkAiHealth = async () => {
   }
 };
 
-/**
- * Start the custom AI service
- * TODO: Implement startup logic for your custom AI
- */
+
 export const startAiService = () => {
   return new Promise((resolve, reject) => {
     if (aiReady) {
@@ -55,10 +42,6 @@ export const startAiService = () => {
   });
 };
 
-/**
- * Stop the custom AI service
- * TODO: Implement shutdown logic for your custom AI
- */
 export const stopAiService = () => {
   console.log('⚠️ AI Service shutdown placeholder');
   aiReady = false;

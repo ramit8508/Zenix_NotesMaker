@@ -172,11 +172,12 @@ function App() {
   }, [selectedNote]);
 
   // Sync selectedNote with title, content and contentEditable
+  // Only run when SELECTING a different note, not when updating the same note
   useEffect(() => {
-    console.log('useEffect[selectedNote] triggered, selectedNote:', selectedNote);
+    console.log('useEffect[selectedNote.id] triggered, selectedNote:', selectedNote);
     if (selectedNote) {
-      console.log('Setting title to:', selectedNote.title);
-      console.log('Setting content to:', selectedNote.content?.substring(0, 100));
+      console.log('Loading note - Setting title to:', selectedNote.title);
+      console.log('Loading note - Setting content to:', selectedNote.content?.substring(0, 100));
       console.log('contentEditableRef.current exists?', !!contentEditableRef.current);
       
       setTitle(selectedNote.title || 'Untitled Note');
@@ -188,9 +189,14 @@ function App() {
         console.error('contentEditableRef.current is null!');
       }
     } else {
-      console.log('selectedNote is null/undefined');
+      console.log('selectedNote is null/undefined - clearing editor');
+      setTitle('');
+      setContent('');
+      if (contentEditableRef.current) {
+        contentEditableRef.current.innerHTML = '';
+      }
     }
-  }, [selectedNote]);
+  }, [selectedNote?.id]); // Only trigger when note ID changes, not when note properties update
 
   const checkAiService = async () => {
     try {
@@ -2127,6 +2133,12 @@ function App() {
                 placeholder="Title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
+                onBlur={() => {
+                  console.log('Title input onBlur - saving note');
+                  if (selectedNote) {
+                    handleUpdateNote();
+                  }
+                }}
               />
               
               {isDrawing ? (

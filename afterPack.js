@@ -26,7 +26,7 @@ exports.default = async function(context) {
   console.log('Platform:', context.platform?.name || 'unknown');
   
   if (!fs.existsSync(backendPath)) {
-    console.warn('⚠️  Backend path not found:', backendPath);
+    console.warn(' Backend path not found:', backendPath);
     return;
   }
 
