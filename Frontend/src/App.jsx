@@ -171,6 +171,18 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedNote]);
 
+  // Sync selectedNote with title, content and contentEditable
+  useEffect(() => {
+    if (selectedNote) {
+      console.log('Selected note changed:', selectedNote);
+      setTitle(selectedNote.title || 'Untitled Note');
+      setContent(selectedNote.content || '');
+      if (contentEditableRef.current) {
+        contentEditableRef.current.innerHTML = selectedNote.content || '';
+      }
+    }
+  }, [selectedNote]);
+
   const checkAiService = async () => {
     try {
       const response = await fetch(getApiUrl('ai/health'), {
@@ -430,9 +442,19 @@ function App() {
   };
 
   const getFilteredNotes = () => {
-    const filtered = !selectedFolder ? notes : notes.filter(note => note.folder === selectedFolder);
-    console.log('getFilteredNotes - selectedFolder:', selectedFolder, 'total notes:', notes.length, 'filtered:', filtered.length);
-    console.log('Filtered notes:', filtered);
+    console.log('getFilteredNotes called - selectedFolder:', selectedFolder);
+    console.log('All notes:', notes.map(n => ({ id: n.id, title: n.title, folder: n.folder })));
+    
+    const filtered = !selectedFolder ? notes : notes.filter(note => {
+      const matches = note.folder === selectedFolder;
+      if (!matches) {
+        console.log(`Note "${note.title}" folder "${note.folder}" !== "${selectedFolder}"`);
+      }
+      return matches;
+    });
+    
+    console.log('Filtered result:', filtered.length, 'notes');
+    console.log('Filtered notes:', filtered.map(n => ({ id: n.id, title: n.title, folder: n.folder })));
     return filtered;
   };
 
@@ -513,12 +535,15 @@ function App() {
     const oldName = renamingFolder.folder;
     const newName = newFolderRename.trim();
     
+    console.log('Renaming folder from:', oldName, 'to:', newName);
+    
     if (oldName === newName) {
       setRenamingFolder(null);
       return;
     }
     
     try {
+      console.log('Sending PUT request to:', getApiUrl(`folders/${encodeURIComponent(oldName)}`));
       const response = await fetch(getApiUrl(`folders/${encodeURIComponent(oldName)}`), {
         method: 'PUT',
         headers: {
@@ -528,17 +553,23 @@ function App() {
         body: JSON.stringify({ newName }),
       });
 
+      console.log('Response status:', response.status);
       const data = await response.json();
+      console.log('Response data:', data);
+      
       if (data.success) {
         console.log('Folder renamed from', oldName, 'to', newName);
         
         // Update all notes with this folder
         setNotes(prevNotes => {
+          console.log('Updating notes folders, total notes:', prevNotes.length);
           const updated = prevNotes.map(note => 
             note.folder === oldName 
               ? { ...note, folder: newName }
               : note
           );
+          console.log('Notes with old folder name:', prevNotes.filter(n => n.folder === oldName).length);
+          console.log('Notes with new folder name:', updated.filter(n => n.folder === newName).length);
           return [...updated];
         });
         
