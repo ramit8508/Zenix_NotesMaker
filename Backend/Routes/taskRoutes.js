@@ -16,6 +16,17 @@ import { startAiService, checkAiHealth, isAiReady, isAiStarting } from '../Servi
 
 const router = express.Router();
 
+// Health check endpoint
+router.get('/health', (req, res) => {
+  console.log('🏥 Health check requested');
+  res.json({ 
+    success: true, 
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    deviceId: req.deviceId
+  });
+});
+
 router.get('/notes', getNotes);
 router.get('/notes/folder/:folder', getNotesByFolder);
 router.get('/notes/stats', getNoteStats);

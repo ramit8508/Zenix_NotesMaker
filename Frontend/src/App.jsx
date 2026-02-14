@@ -78,10 +78,26 @@ function App() {
   const [appLoading, setAppLoading] = useState(true);
 
   useEffect(() => {
-    fetchNotes();
-    fetchStats();
-    fetchFolders();
-    checkAiService();
+    // Test backend connectivity first
+    const init = async () => {
+      try {
+        console.log('🏥 Testing backend connectivity...');
+        const response = await fetch(getApiUrl('health'), { credentials: 'include' });
+        const data = await response.json();
+        console.log('✅ Backend is reachable:', data);
+      } catch (error) {
+        console.error('❌ BACKEND NOT REACHABLE:', error);
+        alert('⚠️ Cannot connect to backend server!\n\nPlease check:\n1. Backend is running\n2. Port 5000 is not blocked\n3. Check terminal for errors');
+      }
+      
+      // Load data
+      fetchNotes();
+      fetchStats();
+      fetchFolders();
+      checkAiService();
+    };
+    
+    init();
     
     // App loading animation
     const timer = setTimeout(() => {
@@ -748,14 +764,19 @@ function App() {
 
   const handleUpdateNote = async () => {
     if (!selectedNote) {
-      console.log('handleUpdateNote: no note selected');
+      console.log('❌ handleUpdateNote: no note selected');
       return;
     }
 
     // Always get fresh content from DOM
     const actualContent = contentEditableRef.current ? contentEditableRef.current.innerHTML : content;
 
-    console.log('handleUpdateNote: saving note ID', selectedNote.id, 'content length:', actualContent.length, 'title:', title);
+    console.log('🔄 SAVING NOTE:', {
+      id: selectedNote.id,
+      title: title,
+      contentLength: actualContent.length,
+      apiUrl: getApiUrl(`notes/${selectedNote.id}`)
+    });
 
     try {
       const response = await fetch(getApiUrl(`notes/${selectedNote.id}`), {
@@ -770,9 +791,20 @@ function App() {
         }),
       });
 
+      console.log('📡 Response status:', response.status, response.statusText);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ HTTP Error:', response.status, errorText);
+        alert(`Failed to save note: ${response.status} ${errorText}`);
+        return;
+      }
+
       const data = await response.json();
+      console.log('📦 Response data:', data);
+      
       if (data.success) {
-        console.log('✅ Note saved successfully, ID:', selectedNote.id);
+        console.log('✅ NOTE SAVED SUCCESSFULLY! ID:', selectedNote.id);
         // Update the content state to match what was saved
         setContent(actualContent);
         
@@ -796,9 +828,14 @@ function App() {
         
         // Refresh folders for count updates
         await fetchFolders();
+      } else {
+        console.error('❌ Server returned success: false', data.error);
+        alert(`Failed to save note: ${data.error}`);
       }
     } catch (error) {
-      console.error('Error updating note:', error);
+      console.error('❌ EXCEPTION in handleUpdateNote:', error);
+      console.error('Error stack:', error.stack);
+      alert(`Error saving note: ${error.message}`);
     }
   };
 

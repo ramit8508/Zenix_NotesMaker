@@ -31,10 +31,17 @@ if (process.env.IS_PACKAGED === 'true') {
 console.log('🔧 Opening database...');
 const db = new Database(dbPath);
 console.log('✅ Database opened successfully');
+console.log('📊 Database info:', {
+  path: dbPath,
+  readonly: db.readonly,
+  inTransaction: db.inTransaction,
+  open: db.open
+});
 
 // Enable WAL mode for better concurrency and durability
-db.pragma('journal_mode = WAL');
-db.pragma('synchronous = FULL');
+const walMode = db.pragma('journal_mode = WAL', { simple: true });
+const syncMode = db.pragma('synchronous = FULL', { simple: true });
+console.log('💾 Database mode:', { journalMode: walMode, synchronous: syncMode });
 // Enable foreign keys
 db.pragma('foreign_keys = ON');
 

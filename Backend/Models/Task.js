@@ -30,6 +30,14 @@ class Note {
 
   static update(id, deviceId, data) {
     const { title, content, folder } = data;
+    console.log('📝 Task.update called:', {
+      id,
+      deviceId,
+      title,
+      contentLength: content?.length || 0,
+      folder
+    });
+    
     const stmt = db.prepare(`
       UPDATE notes 
       SET title = COALESCE(?, title),
@@ -39,10 +47,30 @@ class Note {
       WHERE id = ? AND device_id = ?
     `);
     const result = stmt.run(title, content, folder, id, deviceId);
-    console.log('Note updated, changes:', result.changes);
+    console.log('📊 Update result - changes:', result.changes);
+    
+    if (result.changes === 0) {
+      console.log('⚠️ No rows updated! Checking if note exists...');
+      const checkStmt = db.prepare('SELECT id, device_id FROM notes WHERE id = ?');
+      const existingNote = checkStmt.get(id);
+      if (existingNote) {
+        console.log('❌ Note exists but device_id mismatch:', {
+          requested: deviceId,
+          actual: existingNote.device_id
+        });
+      } else {
+        console.log('❌ Note does not exist with ID:', id);
+      }
+    }
+    
     // Force WAL checkpoint to write to database file
-    db.pragma('wal_checkpoint(FULL)');
-    return this.getById(id);
+    console.log('💾 Running WAL checkpoint...');
+    const checkpoint = db.pragma('wal_checkpoint(FULL)');
+    console.log('✅ WAL checkpoint result:', checkpoint);
+    
+    const updated = this.getById(id);
+    console.log('📄 Updated note:', updated ? { id: updated.id, title: updated.title, contentLength: updated.content?.length } : 'NOT FOUND');
+    return updated;
   }
 
   static delete(id, deviceId) {
