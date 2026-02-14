@@ -173,13 +173,22 @@ function App() {
 
   // Sync selectedNote with title, content and contentEditable
   useEffect(() => {
+    console.log('useEffect[selectedNote] triggered, selectedNote:', selectedNote);
     if (selectedNote) {
-      console.log('Selected note changed:', selectedNote);
+      console.log('Setting title to:', selectedNote.title);
+      console.log('Setting content to:', selectedNote.content?.substring(0, 100));
+      console.log('contentEditableRef.current exists?', !!contentEditableRef.current);
+      
       setTitle(selectedNote.title || 'Untitled Note');
       setContent(selectedNote.content || '');
       if (contentEditableRef.current) {
         contentEditableRef.current.innerHTML = selectedNote.content || '';
+        console.log('contentEditable innerHTML set to:', contentEditableRef.current.innerHTML.substring(0, 100));
+      } else {
+        console.error('contentEditableRef.current is null!');
       }
+    } else {
+      console.log('selectedNote is null/undefined');
     }
   }, [selectedNote]);
 
@@ -285,7 +294,13 @@ function App() {
       });
       const data = await response.json();
       if (data.success) {
-        console.log('Fetched notes:', data.data);
+        console.log('Fetched notes count:', data.data.length);
+        console.log('Notes details:', data.data.map(n => ({ 
+          id: n.id, 
+          title: n.title, 
+          folder: n.folder,
+          contentLength: n.content?.length || 0
+        })));
         // Force a new array reference to trigger re-render
         setNotes([...data.data]);
         return [...data.data];
@@ -1829,7 +1844,11 @@ function App() {
                   <div 
                     key={note.id}
                     className={`note-item ${selectedNote?.id === note.id ? 'active' : ''}`}
-                    onClick={() => setSelectedNote(note)}
+                    onClick={() => {
+                      console.log('Note clicked:', note);
+                      console.log('Setting selectedNote to:', { id: note.id, title: note.title, folder: note.folder });
+                      setSelectedNote(note);
+                    }}
                   >
                     <div className="note-item-title">{note.title}</div>
                     <div className="note-item-preview">{getPreview(note.content)}</div>

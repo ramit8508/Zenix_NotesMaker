@@ -3,8 +3,11 @@ import Note from '../Models/Task.js';
 export const getNotes = (req, res) => {
   try {
     const notes = Note.getAllByDevice(req.deviceId);
+    console.log('getNotes - deviceId:', req.deviceId, 'count:', notes.length);
+    console.log('Notes:', notes.map(n => ({ id: n.id, title: n.title, folder: n.folder })));
     res.json({ success: true, data: notes });
   } catch (error) {
+    console.error('getNotes error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 };
@@ -68,12 +71,19 @@ export const renameFolder = (req, res) => {
   try {
     const { oldName } = req.params;
     const { newName } = req.body;
+    console.log('renameFolder called - oldName:', oldName, 'newName:', newName, 'deviceId:', req.deviceId);
+    
     if (!newName || !newName.trim()) {
+      console.log('renameFolder - missing newName');
       return res.status(400).json({ success: false, error: 'New folder name is required' });
     }
+    
+    console.log('Calling Note.renameFolder...');
     Note.renameFolder(req.deviceId, oldName, newName.trim());
+    console.log('Folder renamed successfully');
     res.json({ success: true, message: 'Folder renamed successfully' });
   } catch (error) {
+    console.error('renameFolder error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 };
@@ -91,10 +101,13 @@ export const deleteFolder = (req, res) => {
 export const createNote = (req, res) => {
   try {
     const { title, content, folder } = req.body;
+    console.log('createNote called - title:', title, 'folder:', folder, 'deviceId:', req.deviceId);
 
     const note = Note.create(req.deviceId, title, content, folder);
+    console.log('Note created:', note);
     res.status(201).json({ success: true, data: note });
   } catch (error) {
+    console.error('createNote error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 };

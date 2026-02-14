@@ -93,13 +93,16 @@ class Note {
   }
 
   static renameFolder(deviceId, oldName, newName) {
+    console.log('Note.renameFolder - deviceId:', deviceId, 'oldName:', oldName, 'newName:', newName);
+    
     // Update folder name in custom folders table
     const stmt1 = db.prepare(`
       UPDATE folders 
       SET name = ?
       WHERE device_id = ? AND name = ?
     `);
-    stmt1.run(newName, deviceId, oldName);
+    const result1 = stmt1.run(newName, deviceId, oldName);
+    console.log('Updated folders table, changes:', result1.changes);
 
     // Update all notes with this folder
     const stmt2 = db.prepare(`
@@ -107,7 +110,9 @@ class Note {
       SET folder = ?
       WHERE device_id = ? AND folder = ?
     `);
-    stmt2.run(newName, deviceId, oldName);
+    const result2 = stmt2.run(newName, deviceId, oldName);
+    console.log('Updated notes table, changes:', result2.changes);
+    
     return true;
   }
 
