@@ -1,25 +1,73 @@
 import { v4 as uuidv4 } from 'uuid';
 import Device from '../Models/Device.js';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
+
+// Get persistent storage path for deviceId
+const getDeviceIdPath = () => {
+  const userDataDir = path.join(os.homedir(), '.notesmaker');
+  if (!fs.existsSync(userDataDir)) {
+    fs.mkdirSync(userDataDir, { recursive: true });
+  }
+  return path.join(userDataDir, 'device-id.txt');
+};
+
+// Read deviceId from file
+const readDeviceIdFromFile = () => {
+  try {
+    const filePath = getDeviceIdPath();
+    if (fs.existsSync(filePath)) {
+      const deviceId = fs.readFileSync(filePath, 'utf8').trim();
+      console.log('📱 Read deviceId from file:', deviceId);
+      return deviceId;
+    }
+  } catch (error) {
+    console.error('Error reading deviceId from file:', error);
+  }
+  return null;
+};
+
+// Write deviceId to file
+const writeDeviceIdToFile = (deviceId) => {
+  try {
+    const filePath = getDeviceIdPath();
+    fs.writeFileSync(filePath, deviceId, 'utf8');
+    console.log('💾 Saved deviceId to file:', filePath);
+  } catch (error) {
+    console.error('Error writing deviceId to file:', error);
+  }
+};
 
 export const deviceTracker = (req, res, next) => {
-  // Get device ID from cookie or create new one
-  let deviceId = req.cookies?.deviceId;
+  // Try to get deviceId from file first (most reliable)
+  let deviceId = readDeviceIdFromFile();
   
-  console.log('deviceTracker - cookies:', req.cookies);
-  console.log('deviceTracker - existing deviceId from cookie:', deviceId);
+  // Fallback to cookie if file doesn't exist
+  if (!deviceId) {
+    deviceId = req.cookies?.deviceId;
+    console.log('📱 deviceId from cookie:', deviceId);
+  }
   
   if (!deviceId) {
     deviceId = uuidv4();
-    console.log('deviceTracker - NEW deviceId generated:', deviceId);
-    // Set cookie for 10 years (effectively permanent for desktop app)
+    console.log('🆕 NEW deviceId generated:', deviceId);
+    // Save to file for persistence
+    writeDeviceIdToFile(deviceId);
+    
+    // Also set cookie as backup
     res.cookie('deviceId', deviceId, {
       maxAge: 10 * 365 * 24 * 60 * 60 * 1000,
       httpOnly: true,
-      secure: false, // Disable secure flag for development/Electron
-      sameSite: 'lax' // Changed from 'strict' to 'lax' for better compatibility
+      secure: false,
+      sameSite: 'lax'
     });
   } else {
-    console.log('deviceTracker - USING existing deviceId:', deviceId);
+    console.log('✅ USING existing deviceId:', deviceId);
+    // Make sure it's saved to file
+    if (!fs.existsSync(getDeviceIdPath())) {
+      writeDeviceIdToFile(deviceId);
+    }
   }
 
   // Find or create device in database
@@ -27,7 +75,7 @@ export const deviceTracker = (req, res, next) => {
   
   // Attach deviceId to request
   req.deviceId = deviceId;
-  console.log('deviceTracker - deviceId attached to request:', req.deviceId);
+  console.log('📎 deviceId attached to request:', req.deviceId);
   
   next();
 };
